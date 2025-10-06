@@ -1,8 +1,9 @@
 package com.example.comp2008assignment2
 
+import com.google.gson.JsonObject
 import retrofit2.http.GET
-import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 import retrofit2.Response
 
 interface OpenLibraryApi {
@@ -21,8 +22,8 @@ interface OpenLibraryApi {
         @Query("author") author: String
     ): Response<BookSearchResponse>
 
-    @GET("works/{workKey}.json")
-    suspend fun getBookDetails(
-        @Path("workKey") workKey: String
-    ): Response<Book>
+    @GET
+    suspend fun getWorkDetails(
+        @Url url: String
+    ): Response<JsonObject>
 }
