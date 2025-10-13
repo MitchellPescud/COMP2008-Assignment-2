@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.JsonObject
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -19,6 +20,13 @@ class BookViewModel : ViewModel() {
     var isLoading by mutableStateOf(false)
         private set
     var errorMessage by mutableStateOf<String?>(null)
+        private set
+
+    var selectedBook by mutableStateOf<Book?>(null)
+        private set
+    var descLoading by mutableStateOf(false)
+        private set
+    var descError by mutableStateOf<String?>(null)
         private set
 
     private val api: OpenLibraryApi = Retrofit.Builder()
@@ -59,6 +67,58 @@ class BookViewModel : ViewModel() {
             } finally {
                 isLoading = false
             }
+        }
+    }
+
+    fun selectBook(book: Book) {
+        selectedBook = book
+        if (book.description == null) {
+            fetchDescription(book)
+        }
+    }
+
+    private fun fetchDescription(book: Book) {
+        if (book.key == null) {
+            updateBookDescription(book, "No description available.")
+            return
+        }
+
+        viewModelScope.launch {
+            descLoading = true
+            descError = null
+            try {
+                val response = api.getWorkDetails("${book.key}.json")
+                if (response.isSuccessful) {
+                    val json: JsonObject? = response.body()
+                    val descElement = json?.get("description")
+                    val description = when {
+                        descElement == null -> "No description available."
+                        descElement.isJsonPrimitive -> descElement.asString
+                        descElement.isJsonObject -> descElement.asJsonObject.get("value")?.asString ?: "No description available."
+                        else -> "No description available."
+                    }
+                    updateBookDescription(book, description)
+                } else {
+                    descError = when (response.code()) {
+                        404 -> "Description not found."
+                        500 -> "Server error, please try again later."
+                        else -> "Failed to fetch description: ${response.message()}"
+                    }
+                    updateBookDescription(book, "No description available.")
+                }
+            } catch (e: Exception) {
+                descError = "Error: ${e.message}"
+                updateBookDescription(book, "No description available.")
+            } finally {
+                descLoading = false
+            }
+        }
+    }
+
+    private fun updateBookDescription(book: Book, description: String) {
+        books = books.map { if (it == book) it.copy(description = description) else it }
+        if (selectedBook == book) {
+            selectedBook = selectedBook?.copy(description = description)
         }
     }
 }

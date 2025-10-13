@@ -5,20 +5,30 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.comp2008assignment2.ui.theme.COMP2008Assignment2Theme
 
@@ -28,8 +38,25 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             COMP2008Assignment2Theme {
+                val navController = rememberNavController()
+                val viewModel: BookViewModel = viewModel()
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    BookSearchScreen(modifier = Modifier.padding(innerPadding))
+                    NavHost(navController = navController, startDestination = "search") {
+                        composable("search") {
+                            BookSearchScreen(
+                                navController = navController,
+                                viewModel = viewModel,
+                                modifier = Modifier.padding(innerPadding)
+                            )
+                        }
+                        composable("detail") {
+                            BookDetailScreen(
+                                viewModel = viewModel,
+                                navController = navController,
+                                modifier = Modifier.padding(innerPadding)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -37,7 +64,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BookSearchScreen(modifier: Modifier = Modifier, viewModel: BookViewModel = viewModel()) {
+fun BookSearchScreen(
+    navController: NavHostController,
+    viewModel: BookViewModel,
+    modifier: Modifier = Modifier
+) {
     var searchQuery by remember { mutableStateOf("") }
     var searchType by remember { mutableStateOf(SearchType.GENERAL) }
 
@@ -90,7 +121,8 @@ fun BookSearchScreen(modifier: Modifier = Modifier, viewModel: BookViewModel = v
             trailingIcon = {
                 Button(
                     onClick = { viewModel.searchBooks(searchQuery, searchType) },
-                    enabled = searchQuery.isNotBlank()
+                    enabled = searchQuery.isNotBlank(),
+                    modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Text("Search")
                 }
@@ -126,7 +158,6 @@ fun BookSearchScreen(modifier: Modifier = Modifier, viewModel: BookViewModel = v
                 val isLandscape =
                     configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-
                 val columns = when {
                     isTablet && isLandscape -> 3
                     isTablet && !isLandscape -> 2
@@ -142,20 +173,106 @@ fun BookSearchScreen(modifier: Modifier = Modifier, viewModel: BookViewModel = v
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     items(viewModel.books) { book ->
-                        BookItem(book)
+                        BookItem(book = book, onClick = {
+                            viewModel.selectBook(book)
+                            navController.navigate("detail")
+                        })
                     }
                 }
             }
         }
     }
 }
+@Composable
+fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController, modifier: Modifier = Modifier) {
+    val book = viewModel.selectedBook ?: return
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState) // Enable scrolling
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Back Button
+        Button(
+            onClick = { navController.navigateUp() },
+            modifier = Modifier.align(Alignment.Start)
+        ) {
+            Text("Back")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Book cover
+        book.cover_i?.let { coverId ->
+            Image(
+                painter = rememberAsyncImagePainter("https://covers.openlibrary.org/b/id/$coverId-M.jpg"),
+                contentDescription = "Book cover",
+                modifier = Modifier
+                    .size(200.dp)
+                    .padding(bottom = 16.dp)
+            )
+        }
+
+        // Title and details
+        Text(
+            text = book.title ?: "Unknown Title",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        Text(
+            text = "Author(s): ${book.author_name?.joinToString(", ") ?: "Unknown"}",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Text(
+            text = "Published: ${book.first_publish_year ?: "Unknown"}",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Description section
+        when {
+            viewModel.descLoading -> {
+                CircularProgressIndicator()
+            }
+            viewModel.descError != null -> {
+                Text(
+                    text = viewModel.descError ?: "Unknown error",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+            else -> {
+                Text(
+                    text = "Description:",
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        textDecoration = TextDecoration.Underline
+                    ),
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = book.description ?: "No description available.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp)) // Extra bottom padding for readability
+    }
+}
 
 @Composable
-fun BookItem(book: Book) {
+fun BookItem(book: Book, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -197,6 +314,8 @@ fun BookItem(book: Book) {
 @Composable
 fun BookSearchScreenPreview() {
     COMP2008Assignment2Theme {
-        BookSearchScreen()
+        val navController = rememberNavController()
+        val viewModel: BookViewModel = viewModel()
+        BookSearchScreen(navController = navController, viewModel = viewModel)
     }
 }
