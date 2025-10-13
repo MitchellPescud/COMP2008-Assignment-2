@@ -1,65 +1,108 @@
 package com.example.comp2008assignment2
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
-import java.io.File
+import androidx.navigation.NavHostController
 
 @Composable
-fun LocalLibraryPage(viewModel: LocalLibraryViewModel = viewModel()) {
-    val localBooks by viewModel.localBooks.collectAsState()
+fun LocalLibraryPage(
+    navController: NavHostController,
+    viewModel: LocalLibraryViewModel = viewModel()
+) {
+    var searchType by remember { mutableStateOf(SearchType.GENERAL) }
 
-    if (localBooks.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Your local library is empty.")
-        }
-    } else {
-        LazyColumn(modifier = Modifier.padding(16.dp)) {
-            items(localBooks) { book ->
-                LocalBookItem(book = book, onDelete = { viewModel.deleteBook(book.key) })
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun LocalBookItem(book: LocalBook, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(8.dp)) {
-            book.cover_image_path?.let {
-                Image(
-                    painter = rememberAsyncImagePainter(File(it)),
-                    contentDescription = null,
-                    modifier = Modifier.size(100.dp, 150.dp),
-                    contentScale = ContentScale.Crop
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // 🔍 Search field
+        TextField(
+            value = viewModel.searchQuery,
+            onValueChange = { query: String -> viewModel.updateSearchQuery(query, searchType) },
+            label = {
+                Text(
+                    if (searchType == SearchType.GENERAL)
+                        "Search"
+                    else
+                        "Search by ${searchType.name.lowercase().replaceFirstChar { it.uppercase() }}"
                 )
-            } ?: Box(modifier = Modifier.size(100.dp, 150.dp), contentAlignment = Alignment.Center) {
-                Text("No Image")
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // 🔘 Search type radio options
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val options = listOf(
+                SearchType.GENERAL to "All",
+                SearchType.TITLE to "Title",
+                SearchType.AUTHOR to "Author"
+            )
+
+            options.forEach { (type, label) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
+                    RadioButton(
+                        selected = searchType == type,
+                        onClick = {
+                            searchType = type
+                            viewModel.updateSearchQuery(viewModel.searchQuery, searchType)
+                        }
+                    )
+                    Text(label)
+                }
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = book.title ?: "No Title")
-                Text(text = book.author_name ?: "No Author")
-                Text(text = book.first_publish_year?.toString() ?: "N/A")
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onDelete) {
-                    Text("Delete")
+        }
+
+        val books by viewModel.filteredBooks.collectAsState()
+
+        if (books.isEmpty()) {
+            Text(
+                text = "Your local library is empty or no results found.",
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        } else {
+            val configuration = LocalConfiguration.current
+            val isTablet = configuration.smallestScreenWidthDp >= 600
+            val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+            val columns = when {
+                isTablet && isLandscape -> 3
+                isTablet && !isLandscape -> 2
+                !isTablet && isLandscape -> 2
+                else -> 1
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(books) { book ->
+                    BookItem(book = book, onClick = {
+                        viewModel.selectBook(book)
+                        navController.navigate("detail/local")
+                    })
                 }
             }
         }

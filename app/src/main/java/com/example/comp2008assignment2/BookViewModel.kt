@@ -15,14 +15,14 @@ enum class SearchType {
 }
 
 class BookViewModel : ViewModel() {
-    var books by mutableStateOf<List<Book>>(emptyList())
+    var books by mutableStateOf<List<DisplayBook>>(emptyList())
         private set
     var isLoading by mutableStateOf(false)
         private set
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    var selectedBook by mutableStateOf<Book?>(null)
+    var selectedBook by mutableStateOf<DisplayBook?>(null)
         private set
     var descLoading by mutableStateOf(false)
         private set
@@ -51,7 +51,7 @@ class BookViewModel : ViewModel() {
                     SearchType.AUTHOR -> api.searchByAuthor(query)
                 }
                 if (response.isSuccessful) {
-                    books = response.body()?.docs?.filter { it.title != null } ?: emptyList()
+                    books = response.body()?.docs?.filter { it.title != null }?.map { it.toDisplayBook() } ?: emptyList()
                     if (books.isEmpty()) {
                         errorMessage = "No books found for this query."
                     }
@@ -70,19 +70,14 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    fun selectBook(book: Book) {
+    fun selectBook(book: DisplayBook) {
         selectedBook = book
-        if (book.description == null) {
+        if (book.description == null && !book.isLocal) {
             fetchDescription(book)
         }
     }
 
-    private fun fetchDescription(book: Book) {
-        if (book.key == null) {
-            updateBookDescription(book, "No description available.")
-            return
-        }
-
+    private fun fetchDescription(book: DisplayBook) {
         viewModelScope.launch {
             descLoading = true
             descError = null
@@ -115,9 +110,9 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    private fun updateBookDescription(book: Book, description: String) {
-        books = books.map { if (it == book) it.copy(description = description) else it }
-        if (selectedBook == book) {
+    private fun updateBookDescription(book: DisplayBook, description: String) {
+        books = books.map { if (it.key == book.key) it.copy(description = description) else it }
+        if (selectedBook?.key == book.key) {
             selectedBook = selectedBook?.copy(description = description)
         }
     }
