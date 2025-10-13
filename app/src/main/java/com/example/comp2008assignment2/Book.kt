@@ -5,7 +5,7 @@ data class BookSearchResponse(
 )
 
 data class Book(
-    val key: String?,
+    val key: String,
     val title: String?,
     val author_name: List<String>?,
     val first_publish_year: Int?,

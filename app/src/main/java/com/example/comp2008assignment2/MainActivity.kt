@@ -14,6 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,9 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.comp2008assignment2.ui.theme.COMP2008Assignment2Theme
@@ -40,21 +46,59 @@ class MainActivity : ComponentActivity() {
             COMP2008Assignment2Theme {
                 val navController = rememberNavController()
                 val viewModel: BookViewModel = viewModel()
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    NavHost(navController = navController, startDestination = "search") {
-                        composable("search") {
+                val localLibraryViewModel: LocalLibraryViewModel = viewModel()
+
+                Scaffold(modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        NavigationBar {
+                            val navBackStackEntry by navController.currentBackStackEntryAsState()
+                            val currentDestination = navBackStackEntry?.destination
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Filled.Search, contentDescription = "Online Search") },
+                                label = { Text("Online") },
+                                selected = currentDestination?.hierarchy?.any { it.route == "online" } == true,
+                                onClick = {
+                                    navController.navigate("online") {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Filled.Home, contentDescription = "Local Library") },
+                                label = { Text("Local") },
+                                selected = currentDestination?.hierarchy?.any { it.route == "local" } == true,
+                                onClick = {
+                                    navController.navigate("local") {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
+                    }) { innerPadding ->
+                    NavHost(navController = navController, startDestination = "online", modifier = Modifier.padding(innerPadding)) {
+                        composable("online") {
                             BookSearchScreen(
                                 navController = navController,
-                                viewModel = viewModel,
-                                modifier = Modifier.padding(innerPadding)
+                                viewModel = viewModel
                             )
                         }
                         composable("detail") {
                             BookDetailScreen(
                                 viewModel = viewModel,
-                                navController = navController,
-                                modifier = Modifier.padding(innerPadding)
+                                localLibraryViewModel = localLibraryViewModel,
+                                navController = navController
                             )
+                        }
+                        composable("local") {
+                            LocalLibraryPage(viewModel = localLibraryViewModel)
                         }
                     }
                 }
@@ -183,8 +227,14 @@ fun BookSearchScreen(
         }
     }
 }
+
 @Composable
-fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController, modifier: Modifier = Modifier) {
+fun BookDetailScreen(
+    viewModel: BookViewModel,
+    localLibraryViewModel: LocalLibraryViewModel,
+    navController: NavHostController,
+    modifier: Modifier = Modifier
+) {
     val book = viewModel.selectedBook ?: return
     val scrollState = rememberScrollState()
 
@@ -260,6 +310,12 @@ fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController,
                     modifier = Modifier.align(Alignment.Start)
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = { localLibraryViewModel.saveBook(book) }) {
+            Text("Save to Local Library")
         }
 
         Spacer(modifier = Modifier.height(32.dp)) // Extra bottom padding for readability
