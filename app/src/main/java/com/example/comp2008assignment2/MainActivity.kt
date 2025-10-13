@@ -31,6 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.comp2008assignment2.ui.theme.COMP2008Assignment2Theme
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,44 +78,11 @@ fun BookSearchScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Search Type Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(
-                onClick = { searchType = SearchType.GENERAL },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (searchType == SearchType.GENERAL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("General")
-            }
-            Button(
-                onClick = { searchType = SearchType.TITLE },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (searchType == SearchType.TITLE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("Title")
-            }
-            Button(
-                onClick = { searchType = SearchType.AUTHOR },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (searchType == SearchType.AUTHOR) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("Author")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         // Search Bar
         TextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            label = { Text("Search by title or author") },
+            label = { Text("Search Books") },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             singleLine = true,
@@ -128,6 +96,33 @@ fun BookSearchScreen(
                 }
             }
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Search Type Radio Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(SearchType.GENERAL, SearchType.TITLE, SearchType.AUTHOR).forEach { type ->
+                Row(
+                    Modifier
+                        .clickable { searchType = type }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (searchType == type),
+                        onClick = { searchType = type }
+                    )
+                    Text(
+                        text = type.name.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
