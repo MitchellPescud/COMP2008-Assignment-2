@@ -79,6 +79,12 @@ class MainActivity : ComponentActivity() {
                                 viewModel = localViewModel
                             )
                         }
+                        composable("add_book") {
+                            AddBookScreen(
+                                navController = navController,
+                                viewModel = localViewModel
+                            )
+                        }
                         composable("detail/online") {
                             BookDetailScreen(
                                 book = onlineViewModel.selectedBook,

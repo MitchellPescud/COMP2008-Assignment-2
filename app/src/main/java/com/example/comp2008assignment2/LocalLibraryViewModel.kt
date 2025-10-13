@@ -80,4 +80,8 @@ class LocalLibraryViewModel(application: Application) : AndroidViewModel(applica
         )
         repository.insertBook(originalBook)
     }
+
+    fun addBook(book: LocalBook) = viewModelScope.launch {
+        repository.insertLocalBook(book)
+    }
 }

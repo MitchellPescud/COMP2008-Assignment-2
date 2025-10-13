@@ -32,6 +32,10 @@ class BookRepository(private val bookDao: BookDao, private val context: Context)
         bookDao.insertBook(localBook)
     }
 
+    suspend fun insertLocalBook(book: LocalBook) {
+        bookDao.insertBook(book)
+    }
+
     suspend fun deleteBook(key: String) {
         val book = bookDao.getBookByKey(key)
         book?.cover_image_path?.let {
