@@ -121,7 +121,8 @@ fun BookSearchScreen(
             trailingIcon = {
                 Button(
                     onClick = { viewModel.searchBooks(searchQuery, searchType) },
-                    enabled = searchQuery.isNotBlank()
+                    enabled = searchQuery.isNotBlank(),
+                    modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Text("Search")
                 }
