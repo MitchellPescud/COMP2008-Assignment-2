@@ -48,32 +48,48 @@ class MainActivity : ComponentActivity() {
                 val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
                 if (isLandscape) {
-                    // Landscape mode → Left-side navigation
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        NavigationRailBar(navController)
-                        NavHost(
-                            navController = navController,
-                            startDestination = "search",
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        ) {
-                            composable("search") {
-                                BookSearchScreen(navController = navController, viewModel = viewModel)
-                            }
-                            composable("local") {
-                                LocalLibraryScreen(navController = navController, viewModel = viewModel)
-                            }
-                            composable("detail") {
-                                BookDetailScreen(viewModel = viewModel, navController = navController)
-                            }
-                            composable("favorites") {
-                                FavoritesScreen(navController = navController, viewModel = viewModel)
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background // Explicitly set the theme's background color
+                    ) {
+                        Row {
+                            NavigationRailBar(navController)
+                            NavHost(
+                                navController = navController,
+                                startDestination = "search",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            ) {
+                                composable("search") {
+                                    BookSearchScreen(
+                                        navController = navController,
+                                        viewModel = viewModel
+                                    )
+                                }
+                                composable("local") {
+                                    LocalLibraryScreen(
+                                        navController = navController,
+                                        viewModel = viewModel
+                                    )
+                                }
+                                composable("detail") {
+                                    BookDetailScreen(
+                                        viewModel = viewModel,
+                                        navController = navController
+                                    )
+                                }
+                                composable("favorites") {
+                                    FavoritesScreen(
+                                        navController = navController,
+                                        viewModel = viewModel
+                                    )
+                                }
                             }
                         }
                     }
                 } else {
-                    // Portrait mode → Bottom navigation
+                    // Portrait mode remains unchanged
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         bottomBar = { BottomNavigationBar(navController) }
@@ -84,16 +100,28 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(innerPadding)
                         ) {
                             composable("search") {
-                                BookSearchScreen(navController = navController, viewModel = viewModel)
+                                BookSearchScreen(
+                                    navController = navController,
+                                    viewModel = viewModel
+                                )
                             }
                             composable("local") {
-                                LocalLibraryScreen(navController = navController, viewModel = viewModel)
+                                LocalLibraryScreen(
+                                    navController = navController,
+                                    viewModel = viewModel
+                                )
                             }
                             composable("detail") {
-                                BookDetailScreen(viewModel = viewModel, navController = navController)
+                                BookDetailScreen(
+                                    viewModel = viewModel,
+                                    navController = navController
+                                )
                             }
                             composable("favorites") {
-                                FavoritesScreen(navController = navController, viewModel = viewModel)
+                                FavoritesScreen(
+                                    navController = navController,
+                                    viewModel = viewModel
+                                )
                             }
                         }
                     }
