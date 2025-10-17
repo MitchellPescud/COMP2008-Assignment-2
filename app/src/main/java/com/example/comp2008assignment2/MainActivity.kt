@@ -1,5 +1,6 @@
 package com.example.comp2008assignment2
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,13 +12,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -29,13 +30,27 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
 import coil.compose.rememberAsyncImagePainter
 import com.example.comp2008assignment2.ui.theme.COMP2008Assignment2Theme
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        lateinit var bookDao: BookDao
+        lateinit var app: Application
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        app = application
+        val db = Room.databaseBuilder(
+            application,
+            AppDatabase::class.java,
+            "books.db"
+        ).build()
+        bookDao = db.bookDao()
+
         enableEdgeToEdge()
         setContent {
             COMP2008Assignment2Theme {
@@ -45,6 +60,13 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = "search") {
                         composable("search") {
                             BookSearchScreen(
+                                navController = navController,
+                                viewModel = viewModel,
+                                modifier = Modifier.padding(innerPadding)
+                            )
+                        }
+                        composable("local") {
+                            LocalLibraryScreen(
                                 navController = navController,
                                 viewModel = viewModel,
                                 modifier = Modifier.padding(innerPadding)
@@ -78,6 +100,18 @@ fun BookSearchScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Online Search", style = MaterialTheme.typography.headlineSmall)
+            Button(onClick = { navController.navigate("local") }) {
+                Text("My Local Library")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Search Bar
         TextField(
             value = searchQuery,
@@ -178,6 +212,109 @@ fun BookSearchScreen(
         }
     }
 }
+
+@Composable
+fun LocalLibraryScreen(
+    navController: NavHostController,
+    viewModel: BookViewModel,
+    modifier: Modifier = Modifier
+) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadLocalBooks("")
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Local Library", style = MaterialTheme.typography.headlineSmall)
+            Button(onClick = { navController.navigate("search") }) {
+                Text("Back to Online Search")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Search Bar for Local
+        TextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            label = { Text("Search Local Books") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+            singleLine = true,
+            trailingIcon = {
+                Button(
+                    onClick = { viewModel.loadLocalBooks(searchQuery) },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text("Search")
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Loading, Error, or Book List
+        when {
+            viewModel.localIsLoading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
+
+            viewModel.localErrorMessage != null -> {
+                Text(
+                    text = viewModel.localErrorMessage ?: "Unknown error",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+
+            viewModel.localBooks.isEmpty() -> {
+                Text(
+                    text = "No books in your local library yet.",
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+
+            else -> {
+                val configuration = LocalConfiguration.current
+                val isTablet = configuration.smallestScreenWidthDp >= 600
+                val isLandscape =
+                    configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+                val columns = when {
+                    isTablet && isLandscape -> 3
+                    isTablet && !isLandscape -> 2
+                    !isTablet && isLandscape -> 2
+                    else -> 1
+                }
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(viewModel.localBooks) { book ->
+                        BookItem(book = book, onClick = {
+                            viewModel.selectBook(book)
+                            navController.navigate("detail")
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController, modifier: Modifier = Modifier) {
     val book = viewModel.selectedBook ?: return
@@ -186,7 +323,7 @@ fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController,
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(scrollState) // Enable scrolling
+            .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -201,9 +338,10 @@ fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController,
         Spacer(modifier = Modifier.height(16.dp))
 
         // Book cover
-        book.cover_i?.let { coverId ->
+        val coverUrl = book.localCoverPath ?: book.cover_i?.let { "https://covers.openlibrary.org/b/id/$it-M.jpg" }
+        if (coverUrl != null) {
             Image(
-                painter = rememberAsyncImagePainter("https://covers.openlibrary.org/b/id/$coverId-M.jpg"),
+                painter = rememberAsyncImagePainter(coverUrl),
                 contentDescription = "Book cover",
                 modifier = Modifier
                     .size(200.dp)
@@ -257,6 +395,16 @@ fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController,
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Add to Local Library Button
+        Button(
+            onClick = { viewModel.addToLocalLibrary(book) },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text("Add to Local Library")
+        }
+
         Spacer(modifier = Modifier.height(32.dp)) // Extra bottom padding for readability
     }
 }
@@ -277,9 +425,10 @@ fun BookItem(book: Book, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Book Cover (if available)
-            book.cover_i?.let { coverId ->
+            val coverUrl = book.localCoverPath ?: book.cover_i?.let { "https://covers.openlibrary.org/b/id/$it-S.jpg" }
+            if (coverUrl != null) {
                 Image(
-                    painter = rememberAsyncImagePainter("https://covers.openlibrary.org/b/id/$coverId-S.jpg"),
+                    painter = rememberAsyncImagePainter(coverUrl),
                     contentDescription = "Book cover",
                     modifier = Modifier
                         .size(80.dp)
