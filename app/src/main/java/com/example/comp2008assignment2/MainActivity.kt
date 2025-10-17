@@ -221,9 +221,10 @@ fun LocalLibraryScreen(
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var searchType by remember { mutableStateOf(SearchType.GENERAL) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadLocalBooks("")
+        viewModel.loadLocalBooks("", SearchType.GENERAL)
     }
 
     Column(
@@ -253,13 +254,41 @@ fun LocalLibraryScreen(
             singleLine = true,
             trailingIcon = {
                 Button(
-                    onClick = { viewModel.loadLocalBooks(searchQuery) },
+                    onClick = { viewModel.loadLocalBooks(searchQuery, searchType) },
+                    enabled = searchQuery.isNotBlank(),
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Text("Search")
                 }
             }
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Search Type Radio Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(SearchType.GENERAL, SearchType.TITLE, SearchType.AUTHOR).forEach { type ->
+                Row(
+                    Modifier
+                        .clickable { searchType = type }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (searchType == type),
+                        onClick = { searchType = type }
+                    )
+                    Text(
+                        text = type.name.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -279,7 +308,7 @@ fun LocalLibraryScreen(
 
             viewModel.localBooks.isEmpty() -> {
                 Text(
-                    text = "No books in your local library yet.",
+                    text = if (searchQuery.isEmpty()) "No books in your local library yet." else "No books found for this query.",
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
@@ -319,9 +348,9 @@ fun LocalLibraryScreen(
 @Composable
 fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController, modifier: Modifier = Modifier) {
     val book = viewModel.selectedBook ?: return
-    val scrollState = rememberScrollState()
     var isInLibrary by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     // Check if book is in local library
     LaunchedEffect(book) {
@@ -479,5 +508,15 @@ fun BookSearchScreenPreview() {
         val navController = rememberNavController()
         val viewModel: BookViewModel = viewModel()
         BookSearchScreen(navController = navController, viewModel = viewModel)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LocalLibraryScreenPreview() {
+    COMP2008Assignment2Theme {
+        val navController = rememberNavController()
+        val viewModel: BookViewModel = viewModel()
+        LocalLibraryScreen(navController = navController, viewModel = viewModel)
     }
 }

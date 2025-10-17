@@ -108,14 +108,18 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    fun loadLocalBooks(query: String = "") {
+    fun loadLocalBooks(query: String = "", searchType: SearchType = SearchType.GENERAL) {
         viewModelScope.launch {
             localIsLoading = true
             localErrorMessage = null
             try {
-                val q = "%$query%"
+                val q = "%${query.trim()}%"
                 val entities = withContext(Dispatchers.IO) {
-                    dao.searchBooks(q)
+                    when (searchType) {
+                        SearchType.GENERAL -> dao.searchBooks(q)
+                        SearchType.TITLE -> dao.searchBooksByTitle(q)
+                        SearchType.AUTHOR -> dao.searchBooksByAuthor(q)
+                    }
                 }
                 localBooks = entities.map { entity ->
                     Book(
@@ -129,7 +133,7 @@ class BookViewModel : ViewModel() {
                     )
                 }
                 if (localBooks.isEmpty()) {
-                    localErrorMessage = "No books found in local library."
+                    localErrorMessage = if (query.isEmpty()) "No books found in local library." else "No books found for this query."
                 }
             } catch (e: Exception) {
                 localErrorMessage = "Error: ${e.message}"
