@@ -16,7 +16,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 
 enum class SearchType {
     GENERAL, TITLE, AUTHOR
@@ -61,9 +60,9 @@ class BookViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
-            val encodedQuery = URLEncoder.encode(query.trim(), "UTF-8").replace("+", "%20")
+            val trimmedQuery = query.trim()
             try {
-                searchBooksWithRetry(encodedQuery, searchType)
+                searchBooksWithRetry(trimmedQuery, searchType)
             } catch (e: Exception) {
                 errorMessage = "Error: ${e.message}"
             } finally {
@@ -92,7 +91,7 @@ class BookViewModel : ViewModel() {
                     } else {
                         errorMessage = when (response.code()) {
                             404 -> "No books found for this query."
-                            500 -> "Server error: ${response.message()}. Please try again."
+                            500 -> "Server error - Code: ${response.code()}. Please try again."
                             else -> "Failed to fetch books: ${response.message()} (Code: ${response.code()})"
                         }
                         return
@@ -132,11 +131,11 @@ class BookViewModel : ViewModel() {
                         localCoverPath = entity.localCoverPath
                     )
                 }
-                if (localBooks.isEmpty()) {
-                    localErrorMessage = if (query.isEmpty()) "No books found in local library." else "No books found for this query."
+                if (localBooks.isEmpty() && query.isNotBlank()) {
+                    localErrorMessage = "No local books found for this query."
                 }
             } catch (e: Exception) {
-                localErrorMessage = "Error: ${e.message}"
+                localErrorMessage = "Error loading local books: ${e.message}"
             } finally {
                 localIsLoading = false
             }
@@ -155,26 +154,18 @@ class BookViewModel : ViewModel() {
             var updatedBook = book
             if (book.description == null) {
                 updatedBook = fetchBookDescription(book)
-                updateBookDescription(book, updatedBook.description ?: "No description available.")
             }
 
-            val coverUrl = book.cover_i?.let { "https://covers.openlibrary.org/b/id/$it-M.jpg" }
             var localPath: String? = null
-            if (coverUrl != null) {
+            book.cover_i?.let { coverId ->
                 try {
-                    val url = URL(coverUrl)
-                    val connection = withContext(Dispatchers.IO) {
-                        url.openConnection() as HttpURLConnection
-                    }
+                    val url = URL("https://covers.openlibrary.org/b/id/$coverId-M.jpg")
+                    val connection = url.openConnection() as HttpURLConnection
                     connection.connect()
                     val input = connection.inputStream
-                    val coversDir = File(MainActivity.app.filesDir, "covers")
-                    coversDir.mkdirs()
-                    val file = File(coversDir, "${book.cover_i}.jpg")
-                    withContext(Dispatchers.IO) {
-                        FileOutputStream(file).use { output ->
-                            input.copyTo(output)
-                        }
+                    val file = File(MainActivity.app.filesDir, "cover_${coverId}.jpg")
+                    FileOutputStream(file).use { output ->
+                        input.copyTo(output)
                     }
                     localPath = file.absolutePath
                 } catch (e: Exception) {
