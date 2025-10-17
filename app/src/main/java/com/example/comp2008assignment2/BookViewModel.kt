@@ -191,7 +191,34 @@ class BookViewModel : ViewModel() {
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
+            loadLocalBooks() // Refresh local books after adding
         }
+    }
+
+    fun removeFromLocalLibrary(book: Book) {
+        viewModelScope.launch {
+            val entity = BookEntity(
+                key = book.key ?: return@launch,
+                title = book.title,
+                author_name = book.author_name?.joinToString(", "),
+                first_publish_year = book.first_publish_year,
+                cover_i = book.cover_i,
+                description = book.description,
+                localCoverPath = book.localCoverPath
+            )
+            withContext(Dispatchers.IO) {
+                dao.deleteBook(entity)
+            }
+            loadLocalBooks() // Refresh local books after removal
+        }
+    }
+
+    suspend fun isBookInLibrary(book: Book): Boolean {
+        return book.key?.let { key ->
+            withContext(Dispatchers.IO) {
+                dao.isBookInLibrary(key)
+            }
+        } ?: false
     }
 
     private suspend fun fetchBookDescription(book: Book): Book {

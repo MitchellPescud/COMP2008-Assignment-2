@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Delete
 
 @Dao
 interface BookDao {
@@ -12,4 +13,10 @@ interface BookDao {
 
     @Query("SELECT * FROM bookentity WHERE title LIKE :query OR author_name LIKE :query")
     suspend fun searchBooks(query: String): List<BookEntity>
+
+    @Delete
+    suspend fun deleteBook(book: BookEntity)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM bookentity WHERE key = :key)")
+    suspend fun isBookInLibrary(key: String): Boolean
 }

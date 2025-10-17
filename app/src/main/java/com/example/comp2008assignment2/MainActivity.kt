@@ -34,6 +34,7 @@ import androidx.room.Room
 import coil.compose.rememberAsyncImagePainter
 import com.example.comp2008assignment2.ui.theme.COMP2008Assignment2Theme
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -319,6 +320,13 @@ fun LocalLibraryScreen(
 fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController, modifier: Modifier = Modifier) {
     val book = viewModel.selectedBook ?: return
     val scrollState = rememberScrollState()
+    var isInLibrary by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Check if book is in local library
+    LaunchedEffect(book) {
+        isInLibrary = viewModel.isBookInLibrary(book)
+    }
 
     Column(
         modifier = modifier
@@ -397,12 +405,22 @@ fun BookDetailScreen(viewModel: BookViewModel, navController: NavHostController,
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Add to Local Library Button
+        // Add/Remove from Local Library Button
         Button(
-            onClick = { viewModel.addToLocalLibrary(book) },
+            onClick = {
+                coroutineScope.launch {
+                    if (isInLibrary) {
+                        viewModel.removeFromLocalLibrary(book)
+                        isInLibrary = false
+                    } else {
+                        viewModel.addToLocalLibrary(book)
+                        isInLibrary = true
+                    }
+                }
+            },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Text("Add to Local Library")
+            Text(if (isInLibrary) "Remove from Local Library" else "Add to Local Library")
         }
 
         Spacer(modifier = Modifier.height(32.dp)) // Extra bottom padding for readability
