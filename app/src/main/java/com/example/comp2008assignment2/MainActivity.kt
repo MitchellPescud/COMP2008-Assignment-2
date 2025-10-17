@@ -171,26 +171,33 @@ fun NavigationRailBar(navController: NavHostController) {
         modifier = Modifier
             .fillMaxHeight()
             .width(100.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant // 👈 same as bottom bar grey
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        items.forEach { item ->
-            NavigationRailItem(
-                icon = {
-                    Icon(
-                        ImageVector.vectorResource(id = item.icon),
-                        contentDescription = item.title
-                    )
-                },
-                label = { Text(item.title) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+        // Use Column to space items evenly
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            items.forEach { item ->
+                NavigationRailItem(
+                    icon = {
+                        Icon(
+                            ImageVector.vectorResource(id = item.icon),
+                            contentDescription = item.title
+                        )
+                    },
+                    label = { Text(item.title) },
+                    selected = currentRoute == item.route,
+                    onClick = {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
