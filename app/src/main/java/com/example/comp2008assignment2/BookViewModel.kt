@@ -16,6 +16,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 enum class SearchType {
     GENERAL, TITLE, AUTHOR
@@ -60,9 +61,9 @@ class BookViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
-            val trimmedQuery = query.trim()
+            val encodedQuery = URLEncoder.encode(query.trim(), "UTF-8").replace("+", "%20")
             try {
-                searchBooksWithRetry(trimmedQuery, searchType)
+                searchBooksWithRetry(encodedQuery, searchType)
             } catch (e: Exception) {
                 errorMessage = "Error: ${e.message}"
             } finally {
@@ -91,7 +92,7 @@ class BookViewModel : ViewModel() {
                     } else {
                         errorMessage = when (response.code()) {
                             404 -> "No books found for this query."
-                            500 -> "Server error - Code: ${response.code()}. Please try again."
+                            500 -> "Server error: ${response.message()}. Please try again."
                             else -> "Failed to fetch books: ${response.message()} (Code: ${response.code()})"
                         }
                         return
@@ -131,11 +132,11 @@ class BookViewModel : ViewModel() {
                         localCoverPath = entity.localCoverPath
                     )
                 }
-                if (localBooks.isEmpty() && query.isNotBlank()) {
-                    localErrorMessage = "No local books found for this query."
+                if (localBooks.isEmpty()) {
+                    localErrorMessage = if (query.isEmpty()) "No books found in local library." else "No books found for this query."
                 }
             } catch (e: Exception) {
-                localErrorMessage = "Error loading local books: ${e.message}"
+                localErrorMessage = "Error: ${e.message}"
             } finally {
                 localIsLoading = false
             }
@@ -154,18 +155,26 @@ class BookViewModel : ViewModel() {
             var updatedBook = book
             if (book.description == null) {
                 updatedBook = fetchBookDescription(book)
+                updateBookDescription(book, updatedBook.description ?: "No description available.")
             }
 
+            val coverUrl = book.cover_i?.let { "https://covers.openlibrary.org/b/id/$it-M.jpg" }
             var localPath: String? = null
-            book.cover_i?.let { coverId ->
+            if (coverUrl != null) {
                 try {
-                    val url = URL("https://covers.openlibrary.org/b/id/$coverId-M.jpg")
-                    val connection = url.openConnection() as HttpURLConnection
+                    val url = URL(coverUrl)
+                    val connection = withContext(Dispatchers.IO) {
+                        url.openConnection() as HttpURLConnection
+                    }
                     connection.connect()
                     val input = connection.inputStream
-                    val file = File(MainActivity.app.filesDir, "cover_${coverId}.jpg")
-                    FileOutputStream(file).use { output ->
-                        input.copyTo(output)
+                    val coversDir = File(MainActivity.app.filesDir, "covers")
+                    coversDir.mkdirs()
+                    val file = File(coversDir, "${book.cover_i}.jpg")
+                    withContext(Dispatchers.IO) {
+                        FileOutputStream(file).use { output ->
+                            input.copyTo(output)
+                        }
                     }
                     localPath = file.absolutePath
                 } catch (e: Exception) {
@@ -205,6 +214,36 @@ class BookViewModel : ViewModel() {
                 dao.deleteBook(entity)
             }
             loadLocalBooks() // Refresh local books after removal
+        }
+    }
+
+    fun addManualBook(
+        title: String,
+        author: String,
+        year: Int?,
+        onDone: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            // generate a local-only key so other code paths (e.g., isBookInLibrary) can work
+            val localKey = "manual_" + System.currentTimeMillis()
+
+            val entity = BookEntity(
+                id = 0, // auto-generate (Room will assign)  ← matches your entity
+                key = localKey, // local-only key (safe for null-sensitive paths)
+                title = title.trim(),
+                author_name = author.trim(),
+                first_publish_year = year,
+                cover_i = null,
+                description = "Added manually",
+                localCoverPath = null
+            )
+
+            withContext(Dispatchers.IO) {
+                dao.insertBook(entity) // uses your existing DAO method
+            }
+            // refresh Local Library so the new book appears immediately
+            loadLocalBooks()
+            onDone()
         }
     }
 
