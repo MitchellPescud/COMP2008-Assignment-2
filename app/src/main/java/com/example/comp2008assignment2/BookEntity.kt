@@ -3,9 +3,10 @@ package com.example.comp2008assignment2
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "bookentity")
+@Entity(tableName = "LocalBooks")
 data class BookEntity(
-    @PrimaryKey val key: String,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,   // new local ID
+    val key: String?,                                   // nullable for API/manual
     val title: String?,
     val author_name: String?,
     val first_publish_year: Int?,

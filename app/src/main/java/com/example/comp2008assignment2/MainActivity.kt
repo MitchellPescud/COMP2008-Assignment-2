@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 if (isLandscape) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background // Explicitly set the theme's background color
+                        color = MaterialTheme.colorScheme.background
                     ) {
                         Row {
                             NavigationRailBar(navController)
@@ -85,11 +85,16 @@ class MainActivity : ComponentActivity() {
                                         viewModel = viewModel
                                     )
                                 }
+                                composable("manual_add") {
+                                    ManualAddBookScreen(
+                                        vm = viewModel,
+                                        onBack = { navController.navigateUp() }
+                                    )
+                                }
                             }
                         }
                     }
                 } else {
-                    // Portrait mode remains unchanged
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         bottomBar = { BottomNavigationBar(navController) }
@@ -121,6 +126,12 @@ class MainActivity : ComponentActivity() {
                                 FavoritesScreen(
                                     navController = navController,
                                     viewModel = viewModel
+                                )
+                            }
+                            composable("manual_add") {
+                                ManualAddBookScreen(
+                                    vm = viewModel,
+                                    onBack = { navController.navigateUp() }
                                 )
                             }
                         }
@@ -173,7 +184,6 @@ fun NavigationRailBar(navController: NavHostController) {
             .width(100.dp),
         containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        // Use Column to space items evenly
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceEvenly,

@@ -11,18 +11,18 @@ interface BookDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBook(book: BookEntity)
 
-    @Query("SELECT * FROM bookentity WHERE title LIKE :query OR author_name LIKE :query")
+    @Query("SELECT * FROM LocalBooks WHERE title LIKE :query OR author_name LIKE :query")
     suspend fun searchBooks(query: String): List<BookEntity>
 
-    @Query("SELECT * FROM bookentity WHERE title LIKE :query")
+    @Query("SELECT * FROM LocalBooks WHERE title LIKE :query")
     suspend fun searchBooksByTitle(query: String): List<BookEntity>
 
-    @Query("SELECT * FROM bookentity WHERE author_name LIKE :query")
+    @Query("SELECT * FROM LocalBooks WHERE author_name LIKE :query")
     suspend fun searchBooksByAuthor(query: String): List<BookEntity>
 
     @Delete
     suspend fun deleteBook(book: BookEntity)
 
-    @Query("SELECT EXISTS(SELECT 1 FROM bookentity WHERE key = :key)")
+    @Query("SELECT EXISTS(SELECT 1 FROM LocalBooks WHERE key = :key)")
     suspend fun isBookInLibrary(key: String): Boolean
 }
