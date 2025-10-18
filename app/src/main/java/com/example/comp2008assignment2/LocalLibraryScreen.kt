@@ -170,8 +170,8 @@ fun LocalLibraryScreen(
                     ) {
                         items(viewModel.localBooks) { book ->
                             BookItem(book = book, onClick = {
-                                viewModel.selectBook(book)
-                                navController.navigate("detail")
+                                viewModel.selectLocalBook(book)
+                                navController.navigate("local_detail")
                             })
                         }
                     }

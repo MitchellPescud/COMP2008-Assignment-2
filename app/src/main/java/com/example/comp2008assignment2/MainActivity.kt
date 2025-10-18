@@ -73,10 +73,18 @@ class MainActivity : ComponentActivity() {
                                         viewModel = viewModel
                                     )
                                 }
-                                composable("detail") {
+                                composable("online_detail") {
                                     BookDetailScreen(
                                         viewModel = viewModel,
-                                        navController = navController
+                                        navController = navController,
+                                        isOnline = true
+                                    )
+                                }
+                                composable("local_detail") {
+                                    BookDetailScreen(
+                                        viewModel = viewModel,
+                                        navController = navController,
+                                        isOnline = false
                                     )
                                 }
                                 composable("favorites") {
@@ -116,10 +124,18 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel
                                 )
                             }
-                            composable("detail") {
+                            composable("online_detail") {
                                 BookDetailScreen(
                                     viewModel = viewModel,
-                                    navController = navController
+                                    navController = navController,
+                                    isOnline = true
+                                )
+                            }
+                            composable("local_detail") {
+                                BookDetailScreen(
+                                    viewModel = viewModel,
+                                    navController = navController,
+                                    isOnline = false
                                 )
                             }
                             composable("favorites") {

@@ -36,11 +36,18 @@ class BookViewModel : ViewModel() {
     var localErrorMessage by mutableStateOf<String?>(null)
         private set
 
-    var selectedBook by mutableStateOf<Book?>(null)
+    var selectedOnlineBook by mutableStateOf<Book?>(null)
         private set
-    var descLoading by mutableStateOf(false)
+    var onlineDescLoading by mutableStateOf(false)
         private set
-    var descError by mutableStateOf<String?>(null)
+    var onlineDescError by mutableStateOf<String?>(null)
+        private set
+
+    var selectedLocalBook by mutableStateOf<Book?>(null)
+        private set
+    var localDescLoading by mutableStateOf(false)
+        private set
+    var localDescError by mutableStateOf<String?>(null)
         private set
 
     private val api: OpenLibraryApi = Retrofit.Builder()
@@ -142,10 +149,17 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    fun selectBook(book: Book) {
-        selectedBook = book
+    fun selectOnlineBook(book: Book) {
+        selectedOnlineBook = book
         if (book.description == null) {
-            fetchDescription(book)
+            fetchDescription(book, isOnline = true)
+        }
+    }
+
+    fun selectLocalBook(book: Book) {
+        selectedLocalBook = book
+        if (book.description == null) {
+            fetchDescription(book, isOnline = false)
         }
     }
 
@@ -269,15 +283,20 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    private fun fetchDescription(book: Book) {
+    private fun fetchDescription(book: Book, isOnline: Boolean) {
         if (book.key == null) {
-            updateBookDescription(book, "No description available.")
+            updateBookDescription(book, "No description available.", isOnline)
             return
         }
 
         viewModelScope.launch {
-            descLoading = true
-            descError = null
+            if (isOnline) {
+                onlineDescLoading = true
+                onlineDescError = null
+            } else {
+                localDescLoading = true
+                localDescError = null
+            }
             try {
                 val response = api.getWorkDetails("${book.key}.json")
                 if (response.isSuccessful) {
@@ -289,29 +308,48 @@ class BookViewModel : ViewModel() {
                         descElement.isJsonObject -> descElement.asJsonObject.get("value")?.asString ?: "No description available."
                         else -> "No description available."
                     }
-                    updateBookDescription(book, description)
+                    updateBookDescription(book, description, isOnline)
                 } else {
-                    descError = when (response.code()) {
+                    val errorMessage = when (response.code()) {
                         404 -> "Description not found."
                         500 -> "Server error: ${response.message()}. Please try again."
                         else -> "Failed to fetch description: ${response.message()} (Code: ${response.code()})"
                     }
-                    updateBookDescription(book, "No description available.")
+                    if (isOnline) {
+                        onlineDescError = errorMessage
+                    } else {
+                        localDescError = errorMessage
+                    }
+                    updateBookDescription(book, "No description available.", isOnline)
                 }
             } catch (e: Exception) {
-                descError = "Error: ${e.message}"
-                updateBookDescription(book, "No description available.")
+                if (isOnline) {
+                    onlineDescError = "Error: ${e.message}"
+                } else {
+                    localDescError = "Error: ${e.message}"
+                }
+                updateBookDescription(book, "No description available.", isOnline)
             } finally {
-                descLoading = false
+                if (isOnline) {
+                    onlineDescLoading = false
+                } else {
+                    localDescLoading = false
+                }
             }
         }
     }
 
-    private fun updateBookDescription(book: Book, description: String) {
-        books = books.map { if (it == book) it.copy(description = description) else it }
-        localBooks = localBooks.map { if (it == book) it.copy(description = description) else it }
-        if (selectedBook == book) {
-            selectedBook = selectedBook?.copy(description = description)
+    private fun updateBookDescription(book: Book, description: String, isOnline: Boolean) {
+        if (isOnline) {
+            books = books.map { if (it == book) it.copy(description = description) else it }
+            if (selectedOnlineBook == book) {
+                selectedOnlineBook = selectedOnlineBook?.copy(description = description)
+            }
+        } else {
+            localBooks = localBooks.map { if (it == book) it.copy(description = description) else it }
+            if (selectedLocalBook == book) {
+                selectedLocalBook = selectedLocalBook?.copy(description = description)
+            }
         }
     }
 }
