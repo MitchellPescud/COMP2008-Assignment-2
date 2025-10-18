@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("manualAdd") {
                             ManualAddBookScreen(
-                                vm = viewModel,                    // <-- this is your BookViewModel
+                                vm = viewModel,
                                 onBack = { navController.popBackStack() }
                             )
                         }
