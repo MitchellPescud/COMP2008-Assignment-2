@@ -204,64 +204,50 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    fun removeFromLocalLibrary(book: Book) {
+    fun removeFromLocalLibrary(book: Book, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
-            val entity = BookEntity(
-                key = book.key ?: return@launch,
-                title = book.title,
-                author_name = book.author_name?.joinToString(", "),
-                first_publish_year = book.first_publish_year,
-                cover_i = book.cover_i,
-                description = book.description,
-                localCoverPath = book.localCoverPath
-            )
             withContext(Dispatchers.IO) {
-                dao.deleteBook(entity)
+                book.key?.let { key ->
+                    dao.getBookByKey(key)?.let { entity ->
+                        entity.localCoverPath?.let { path ->
+                            try {
+                                File(path).delete()
+                            } catch (e: Exception) {
+                                // Log or handle error if deletion fails
+                            }
+                        }
+                        dao.deleteBook(entity)
+                    }
+                }
             }
             loadLocalBooks() // Refresh local books after removal
+            onSuccess()
         }
     }
+
 
     fun addManualBook(
         title: String,
         author: String,
         year: Int?,
-        onDone: () -> Unit = {}
+        localCoverPath: String? = null,
+        onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-            val localKey = "manual_" + System.currentTimeMillis()
-
+            val localKey = "manual_${System.currentTimeMillis()}"
             val entity = BookEntity(
-                id = 0,
                 key = localKey,
                 title = title.trim(),
                 author_name = author.trim(),
                 first_publish_year = year,
                 cover_i = null,
                 description = "Added manually",
-                localCoverPath = null
+                localCoverPath = localCoverPath
             )
-
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
             loadLocalBooks()
-            onDone()
-        }
-    }
-
-    fun addManualBook(title: String, author: String, year: Int?, localCoverPath: String? = null, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            val bookEntity = BookEntity(
-                key = null,
-                title = title,
-                author_name = author,
-                first_publish_year = year,
-                cover_i = null,
-                description = null,
-                localCoverPath = localCoverPath
-            )
-            MainActivity.bookDao.insertBook(bookEntity)
             onSuccess()
         }
     }

@@ -25,4 +25,7 @@ interface BookDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM LocalBooks WHERE key = :key)")
     suspend fun isBookInLibrary(key: String): Boolean
+
+    @Query("SELECT * FROM LocalBooks WHERE key = :key")
+    suspend fun getBookByKey(key: String): BookEntity?
 }

@@ -27,6 +27,7 @@ fun BookDetailScreen(
     val descLoading = if (isOnline) viewModel.onlineDescLoading else viewModel.localDescLoading
     val descError = if (isOnline) viewModel.onlineDescError else viewModel.localDescError
     var isInLibrary by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
@@ -46,6 +47,30 @@ fun BookDetailScreen(
             style = MaterialTheme.typography.bodyLarge
         )
         return
+    }
+
+    // Confirmation Dialog
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to remove this book from your local library?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDialog = false
+                        viewModel.removeFromLocalLibrary(book) { navController.navigateUp() }
+                    }
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Column(
@@ -128,11 +153,10 @@ fun BookDetailScreen(
         // Add/Remove from Local Library Button
         Button(
             onClick = {
-                coroutineScope.launch {
-                    if (isInLibrary) {
-                        viewModel.removeFromLocalLibrary(book)
-                        isInLibrary = false
-                    } else {
+                if (isInLibrary) {
+                    showDialog = true
+                } else {
+                    coroutineScope.launch {
                         viewModel.addToLocalLibrary(book)
                         isInLibrary = true
                     }
