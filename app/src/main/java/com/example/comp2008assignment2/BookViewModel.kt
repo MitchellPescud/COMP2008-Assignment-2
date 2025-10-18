@@ -149,6 +149,12 @@ class BookViewModel : ViewModel() {
         }
     }
 
+    suspend fun getAllLocalBooks(): List<BookEntity> {
+        return withContext(Dispatchers.IO) {
+            dao.searchBooks("%")  // "%" matches everything with LIKE
+        }
+    }
+
     fun selectOnlineBook(book: Book) {
         selectedOnlineBook = book
         if (book.description == null) {
@@ -225,6 +231,9 @@ class BookViewModel : ViewModel() {
         }
     }
 
+    fun addToFavorites(book: Book) {
+        addToLocalLibrary(book)
+    }
 
     fun addManualBook(
         title: String,

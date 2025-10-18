@@ -14,6 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -151,20 +154,47 @@ fun BookDetailScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Add/Remove from Local Library Button
-        Button(
-            onClick = {
-                if (isInLibrary) {
-                    showDialog = true
-                } else {
+        val snackbars = remember { SnackbarHostState() }
+        LaunchedEffect(Unit) { /* keeps host alive */ }
+        Spacer(Modifier.height(8.dp))
+        SnackbarHost(hostState = snackbars)
+
+        if (!isInLibrary) {
+            // Two separate add actions when not saved yet
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1) Add to Favourites (for now, same store as local; you can split later)
+                Button(onClick = {
+                    coroutineScope.launch {
+                        viewModel.addToFavorites(book)
+                        isInLibrary = true
+                        snackbars.showSnackbar("Added to Favourites")
+                    }
+                }) {
+                    Text("Add to Favourites")
+                }
+
+                // 2) Add to Local Library
+                OutlinedButton(onClick = {
                     coroutineScope.launch {
                         viewModel.addToLocalLibrary(book)
                         isInLibrary = true
+                        snackbars.showSnackbar("Added to Local Library")
                     }
+                }) {
+                    Text("Add to Local Library")
                 }
-            },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Text(if (isInLibrary) "Remove from Local Library" else "Add to Local Library")
+            }
+        } else {
+            // Already saved → show Remove action
+            Button(
+                onClick = { showDialog = true },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Remove from Local Library")
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp)) // Extra bottom padding for readability

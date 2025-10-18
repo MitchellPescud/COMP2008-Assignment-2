@@ -16,6 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import java.util.Locale
 import android.content.res.Configuration
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @Composable
 fun BookSearchScreen(
@@ -160,10 +164,27 @@ fun BookSearchScreen(
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     items(viewModel.books) { book ->
-                        BookItem(book = book, onClick = {
-                            viewModel.selectOnlineBook(book)
-                            navController.navigate("online_detail")
-                        })
+                        Box {
+                            BookItem(
+                                book = book,
+                                onClick = {
+                                    viewModel.selectOnlineBook(book)
+                                    navController.navigate("online_detail")
+                                }
+                            )
+
+                            IconButton(
+                                onClick = { viewModel.addToLocalLibrary(book) },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FavoriteBorder,
+                                    contentDescription = "Add ${book.title} to favourites"
+                                )
+                            }
+                        }
                     }
                 }
             }
