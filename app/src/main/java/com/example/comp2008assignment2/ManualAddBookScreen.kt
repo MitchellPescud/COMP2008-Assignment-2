@@ -5,13 +5,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualAddBookScreen(
     vm: BookViewModel,
@@ -25,19 +25,32 @@ fun ManualAddBookScreen(
     val canSave = title.isNotBlank() && author.isNotBlank() &&
             (yearText.isBlank() || (year != null && year in 0..2100))
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Add Book Manually") },
-                navigationIcon = {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Title and Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Add Book Manually",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Row {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = ImageVector.vectorResource(id = R.drawable.back_arrow),
                             contentDescription = "Back"
                         )
                     }
-                },
-                actions = {
                     IconButton(
                         onClick = { vm.addManualBook(title, author, year) { onBack() } },
                         enabled = canSave
@@ -48,17 +61,9 @@ fun ManualAddBookScreen(
                         )
                     }
                 }
-            )
-        }
-    )
-    { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+            }
+
+            // Input Fields
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -92,7 +97,7 @@ fun ManualAddBookScreen(
 
             Spacer(Modifier.weight(1f))
             Text(
-                "Tip: This works fully offline. You can add a personal cover photo later.",
+                text = "Tip: This works fully offline. You can add a personal cover photo later.",
                 style = MaterialTheme.typography.bodySmall
             )
         }
