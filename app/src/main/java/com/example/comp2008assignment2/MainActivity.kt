@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 if (isLandscape) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background // Explicitly set the theme's background color
+                        color = MaterialTheme.colorScheme.background
                     ) {
                         Row {
                             NavigationRailBar(navController)
@@ -73,10 +73,18 @@ class MainActivity : ComponentActivity() {
                                         viewModel = viewModel
                                     )
                                 }
-                                composable("detail") {
+                                composable("online_detail") {
                                     BookDetailScreen(
                                         viewModel = viewModel,
-                                        navController = navController
+                                        navController = navController,
+                                        isOnline = true
+                                    )
+                                }
+                                composable("local_detail") {
+                                    BookDetailScreen(
+                                        viewModel = viewModel,
+                                        navController = navController,
+                                        isOnline = false
                                     )
                                 }
                                 composable("favorites") {
@@ -85,11 +93,16 @@ class MainActivity : ComponentActivity() {
                                         viewModel = viewModel
                                     )
                                 }
+                                composable("manual_add") {
+                                    ManualAddBookScreen(
+                                        vm = viewModel,
+                                        onBack = { navController.navigateUp() }
+                                    )
+                                }
                             }
                         }
                     }
                 } else {
-                    // Portrait mode remains unchanged
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         bottomBar = { BottomNavigationBar(navController) }
@@ -111,16 +124,30 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel
                                 )
                             }
-                            composable("detail") {
+                            composable("online_detail") {
                                 BookDetailScreen(
                                     viewModel = viewModel,
-                                    navController = navController
+                                    navController = navController,
+                                    isOnline = true
+                                )
+                            }
+                            composable("local_detail") {
+                                BookDetailScreen(
+                                    viewModel = viewModel,
+                                    navController = navController,
+                                    isOnline = false
                                 )
                             }
                             composable("favorites") {
                                 FavoritesScreen(
                                     navController = navController,
                                     viewModel = viewModel
+                                )
+                            }
+                            composable("manual_add") {
+                                ManualAddBookScreen(
+                                    vm = viewModel,
+                                    onBack = { navController.navigateUp() }
                                 )
                             }
                         }
@@ -138,13 +165,24 @@ fun BottomNavigationBar(navController: NavHostController) {
         NavigationItem("Local Library", "local", R.drawable.library),
         NavigationItem("Favorites", "favorites", R.drawable.favourite)
     )
+
+    // Map child routes to their parent routes for highlighting
+    val routeToParent = mapOf(
+        "online_detail" to "search",
+        "local_detail" to "local",
+        "manual_add" to "local"
+    )
+
     NavigationBar {
         val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+        // Determine the effective route for highlighting (parent or current)
+        val effectiveRoute = routeToParent[currentRoute] ?: currentRoute
+
         items.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(ImageVector.vectorResource(id = item.icon), contentDescription = item.title) },
                 label = { Text(item.title) },
-                selected = currentRoute == item.route,
+                selected = effectiveRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
                         popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -165,7 +203,16 @@ fun NavigationRailBar(navController: NavHostController) {
         NavigationItem("Favorites", "favorites", R.drawable.favourite)
     )
 
+    // Map child routes to their parent routes for highlighting
+    val routeToParent = mapOf(
+        "online_detail" to "search",
+        "local_detail" to "local",
+        "manual_add" to "local"
+    )
+
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    // Determine the effective route for highlighting (parent or current)
+    val effectiveRoute = routeToParent[currentRoute] ?: currentRoute
 
     NavigationRail(
         modifier = Modifier
@@ -173,7 +220,6 @@ fun NavigationRailBar(navController: NavHostController) {
             .width(100.dp),
         containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        // Use Column to space items evenly
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceEvenly,
@@ -188,7 +234,7 @@ fun NavigationRailBar(navController: NavHostController) {
                         )
                     },
                     label = { Text(item.title) },
-                    selected = currentRoute == item.route,
+                    selected = effectiveRoute == item.route,
                     onClick = {
                         navController.navigate(item.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }

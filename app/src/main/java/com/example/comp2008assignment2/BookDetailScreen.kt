@@ -1,8 +1,8 @@
 package com.example.comp2008assignment2
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,16 +20,32 @@ import kotlinx.coroutines.launch
 fun BookDetailScreen(
     viewModel: BookViewModel,
     navController: NavHostController,
+    isOnline: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val book = viewModel.selectedBook ?: return
+    val book = if (isOnline) viewModel.selectedOnlineBook else viewModel.selectedLocalBook
+    val descLoading = if (isOnline) viewModel.onlineDescLoading else viewModel.localDescLoading
+    val descError = if (isOnline) viewModel.onlineDescError else viewModel.localDescError
     var isInLibrary by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     // Check if book is in local library
     LaunchedEffect(book) {
-        isInLibrary = viewModel.isBookInLibrary(book)
+        if (book != null) {
+            isInLibrary = viewModel.isBookInLibrary(book)
+        }
+    }
+
+    if (book == null) {
+        Text(
+            text = "No book selected",
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize(Alignment.Center),
+            style = MaterialTheme.typography.bodyLarge
+        )
+        return
     }
 
     Column(
@@ -79,12 +95,12 @@ fun BookDetailScreen(
 
         // Description section
         when {
-            viewModel.descLoading -> {
+            descLoading -> {
                 CircularProgressIndicator()
             }
-            viewModel.descError != null -> {
+            descError != null -> {
                 Text(
-                    text = viewModel.descError ?: "Unknown error",
+                    text = descError,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.Start)
                 )

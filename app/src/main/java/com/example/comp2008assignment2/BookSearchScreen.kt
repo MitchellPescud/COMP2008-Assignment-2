@@ -161,8 +161,8 @@ fun BookSearchScreen(
                 ) {
                     items(viewModel.books) { book ->
                         BookItem(book = book, onClick = {
-                            viewModel.selectBook(book)
-                            navController.navigate("detail")
+                            viewModel.selectOnlineBook(book)
+                            navController.navigate("online_detail")
                         })
                     }
                 }
