@@ -250,6 +250,22 @@ class BookViewModel : ViewModel() {
         }
     }
 
+    fun addManualBook(title: String, author: String, year: Int?, localCoverPath: String? = null, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val bookEntity = BookEntity(
+                key = null,
+                title = title,
+                author_name = author,
+                first_publish_year = year,
+                cover_i = null,
+                description = null,
+                localCoverPath = localCoverPath
+            )
+            MainActivity.bookDao.insertBook(bookEntity)
+            onSuccess()
+        }
+    }
+
     suspend fun isBookInLibrary(book: Book): Boolean {
         return book.key?.let { key ->
             withContext(Dispatchers.IO) {
