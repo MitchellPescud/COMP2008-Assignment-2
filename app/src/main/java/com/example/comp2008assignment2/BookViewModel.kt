@@ -231,17 +231,19 @@ class BookViewModel : ViewModel() {
         author: String,
         year: Int?,
         localCoverPath: String? = null,
+        description: String = "No Description Available",
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             val localKey = "manual_${System.currentTimeMillis()}"
+            val desc = description.trim().ifBlank { null }
             val entity = BookEntity(
                 key = localKey,
                 title = title.trim(),
                 author_name = author.trim(),
                 first_publish_year = year,
                 cover_i = null,
-                description = "Added manually",
+                description = desc,
                 localCoverPath = localCoverPath
             )
             withContext(Dispatchers.IO) {

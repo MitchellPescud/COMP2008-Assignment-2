@@ -7,7 +7,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -15,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
@@ -33,10 +34,12 @@ fun ManualAddBookScreen(
     var title by rememberSaveable { mutableStateOf("") }
     var author by rememberSaveable { mutableStateOf("") }
     var yearText by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
     var coverUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var localCoverPath by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val year = yearText.toIntOrNull()
+    val scrollState = rememberScrollState()
 
     // Permission launcher for camera and storage
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -45,7 +48,6 @@ fun ManualAddBookScreen(
         val cameraGranted = permissions[android.Manifest.permission.CAMERA] ?: false
         val storageGranted = permissions[android.Manifest.permission.READ_EXTERNAL_STORAGE] ?: false
         if (cameraGranted || storageGranted) {
-            // Permissions granted, proceed with action
         }
     }
 
@@ -78,8 +80,9 @@ fun ManualAddBookScreen(
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Title and Buttons Row
@@ -101,7 +104,7 @@ fun ManualAddBookScreen(
                     }
                     IconButton(
                         onClick = {
-                            vm.addManualBook(title, author, year, localCoverPath) { onBack() }
+                            vm.addManualBook(title, author, year, localCoverPath, description) { onBack() }
                         },
                         enabled = canSave
                     ) {
@@ -145,6 +148,15 @@ fun ManualAddBookScreen(
                 )
             }
 
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description (optional)") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 10
+            )
+
             // Cover Image Preview
             if (coverUri != null) {
                 Image(
@@ -186,9 +198,11 @@ fun ManualAddBookScreen(
 
             Spacer(Modifier.weight(1f))
             Text(
-                text = "Tip: This works fully offline. You can add or change a cover photo.",
+                text = "Tip: This works fully offline. You can add or change a cover photo and description.",
                 style = MaterialTheme.typography.bodySmall
             )
+            // Additional spacer to ensure content is fully scrollable
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
