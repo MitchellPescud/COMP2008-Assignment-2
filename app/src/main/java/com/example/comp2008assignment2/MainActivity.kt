@@ -165,13 +165,24 @@ fun BottomNavigationBar(navController: NavHostController) {
         NavigationItem("Local Library", "local", R.drawable.library),
         NavigationItem("Favorites", "favorites", R.drawable.favourite)
     )
+
+    // Map child routes to their parent routes for highlighting
+    val routeToParent = mapOf(
+        "online_detail" to "search",
+        "local_detail" to "local",
+        "manual_add" to "local"
+    )
+
     NavigationBar {
         val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+        // Determine the effective route for highlighting (parent or current)
+        val effectiveRoute = routeToParent[currentRoute] ?: currentRoute
+
         items.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(ImageVector.vectorResource(id = item.icon), contentDescription = item.title) },
                 label = { Text(item.title) },
-                selected = currentRoute == item.route,
+                selected = effectiveRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
                         popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -192,7 +203,16 @@ fun NavigationRailBar(navController: NavHostController) {
         NavigationItem("Favorites", "favorites", R.drawable.favourite)
     )
 
+    // Map child routes to their parent routes for highlighting
+    val routeToParent = mapOf(
+        "online_detail" to "search",
+        "local_detail" to "local",
+        "manual_add" to "local"
+    )
+
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    // Determine the effective route for highlighting (parent or current)
+    val effectiveRoute = routeToParent[currentRoute] ?: currentRoute
 
     NavigationRail(
         modifier = Modifier
@@ -214,7 +234,7 @@ fun NavigationRailBar(navController: NavHostController) {
                         )
                     },
                     label = { Text(item.title) },
-                    selected = currentRoute == item.route,
+                    selected = effectiveRoute == item.route,
                     onClick = {
                         navController.navigate(item.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
