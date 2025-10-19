@@ -254,8 +254,6 @@ class BookViewModel : ViewModel() {
                 dao.insertBook(entity)
             }
 
-            addFirestoreLibrary(entity.copy(localCoverPath = null))
-
             if (isFavourite) {
                 addFirestoreFavourite(entity.copy(localCoverPath = null))
             }
@@ -283,8 +281,6 @@ class BookViewModel : ViewModel() {
                         if (entity.isFavourite) {
                             deleteFirestoreFavourite(entity)
                         }
-
-                        deleteFirestoreLibrary(entity)
 
                         dao.deleteBook(entity)
                     }
@@ -350,8 +346,6 @@ class BookViewModel : ViewModel() {
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
-
-            addFirestoreLibrary(entity.copy(localCoverPath = null))
 
             if (isFavourite) {
                 addFirestoreFavourite(entity.copy(localCoverPath = null))
@@ -501,18 +495,6 @@ class BookViewModel : ViewModel() {
 
     private fun deleteFirestoreFavourite(e: BookEntity) {
         FirebaseService.favouritesRef()
-            .document(firestoreDocId(e))
-            .delete()
-    }
-
-    private fun addFirestoreLibrary(e: BookEntity) {
-        FirebaseService.libraryRef()
-            .document(firestoreDocId(e))
-            .set(entityToMap(e))
-    }
-
-    private fun deleteFirestoreLibrary(e: BookEntity) {
-        FirebaseService.libraryRef()
             .document(firestoreDocId(e))
             .delete()
     }

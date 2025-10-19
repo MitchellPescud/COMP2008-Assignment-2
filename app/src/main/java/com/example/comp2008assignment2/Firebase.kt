@@ -15,9 +15,4 @@ object FirebaseService {
         db.collection("users")
             .document(auth.currentUser?.uid ?: "anonymous")
             .collection("favourites")
-
-    fun libraryRef() =
-        db.collection("users")
-            .document(auth.currentUser?.uid ?: "anonymous")
-            .collection("library")
 }
