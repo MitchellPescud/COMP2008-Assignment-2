@@ -8,14 +8,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext  // Added import
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState // Added import
+import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.launch
+import android.content.Intent  // Added import
 
 @Composable
 fun BookDetailScreen(
@@ -33,6 +35,7 @@ fun BookDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val context = LocalContext.current  // Added for Intent
 
     // Check if book is in local library and favourite status
     LaunchedEffect(book) {
@@ -194,6 +197,32 @@ fun BookDetailScreen(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text(if (isFavourite) "Remove from Favourites" else "Add to Favourites")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Share Button (New)
+        Button(
+            onClick = {
+                val bookInfo = """
+                |Check out this book!
+                |
+                |Title: ${book.title ?: "Unknown Title"}
+                |Author(s): ${book.author_name?.joinToString(", ") ?: "Unknown"}
+                |Published: ${book.first_publish_year ?: "Unknown"}
+                |Description: ${book.description ?: "No description available."}
+                """.trimMargin()
+
+                val shareIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, bookInfo)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Share book via"))
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text("Share Book")
         }
 
         Spacer(modifier = Modifier.height(32.dp))
