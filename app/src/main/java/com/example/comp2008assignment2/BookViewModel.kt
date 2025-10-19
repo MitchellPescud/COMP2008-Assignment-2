@@ -85,11 +85,7 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    private suspend fun searchBooksWithRetry(
-        query: String,
-        searchType: SearchType,
-        retries: Int = 3
-    ) {
+    private suspend fun searchBooksWithRetry(query: String, searchType: SearchType, retries: Int = 3) {
         repeat(retries) { attempt ->
             try {
                 val response = when (searchType) {
@@ -215,11 +211,7 @@ class BookViewModel : ViewModel() {
             fetchDescription(book, isOnline = false)
         } else {
             // For manual books or books with existing descriptions, update without fetching
-            updateBookDescription(
-                book,
-                book.description ?: "No description available.",
-                isOnline = false
-            )
+            updateBookDescription(book, book.description ?: "No description available.", isOnline = false)
         }
     }
 
@@ -394,9 +386,7 @@ class BookViewModel : ViewModel() {
                 val description = when {
                     descElement == null -> "No description available."
                     descElement.isJsonPrimitive -> descElement.asString
-                    descElement.isJsonObject -> descElement.asJsonObject.get("value")?.asString
-                        ?: "No description available."
-
+                    descElement.isJsonObject -> descElement.asJsonObject.get("value")?.asString ?: "No description available."
                     else -> "No description available."
                 }
                 book.copy(description = description)
@@ -430,9 +420,7 @@ class BookViewModel : ViewModel() {
                     val description = when {
                         descElement == null -> "No description available."
                         descElement.isJsonPrimitive -> descElement.asString
-                        descElement.isJsonObject -> descElement.asJsonObject.get("value")?.asString
-                            ?: "No description available."
-
+                        descElement.isJsonObject -> descElement.asJsonObject.get("value")?.asString ?: "No description available."
                         else -> "No description available."
                     }
                     updateBookDescription(book, description, isOnline)
@@ -473,8 +461,7 @@ class BookViewModel : ViewModel() {
                 selectedOnlineBook = selectedOnlineBook?.copy(description = description)
             }
         } else {
-            localBooks =
-                localBooks.map { if (it == book) it.copy(description = description) else it }
+            localBooks = localBooks.map { if (it == book) it.copy(description = description) else it }
             if (selectedLocalBook == book) {
                 selectedLocalBook = selectedLocalBook?.copy(description = description)
             }
@@ -530,76 +517,37 @@ class BookViewModel : ViewModel() {
             .delete()
     }
 
-
     fun sync() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Wait for Firebase authentication to be ready
+                // Wait very briefly until anonymous sign-in is ready
                 repeat(20) {
                     if (FirebaseService.auth.currentUser != null) return@repeat
-                    delay(100)
+                    kotlinx.coroutines.delay(100)
                 }
-                if (FirebaseService.auth.currentUser == null) {
-                    localErrorMessage = "Firebase authentication failed."
-                    return@launch
-                }
-
-                // Sync favourites collection
                 FirebaseService.favouritesRef().get()
                     .addOnSuccessListener { snap ->
                         viewModelScope.launch(Dispatchers.IO) {
                             snap.documents.forEach { doc ->
                                 val cloud = snapshotToEntity(doc)
                                 val existing = cloud.key?.let { dao.getBookByKey(it) }
+                                // keep any local cover path if we already had this book
                                 if (existing == null) {
                                     dao.insertBook(cloud)
                                 } else {
-                                    dao.updateBook(
-                                        cloud.copy(
-                                            id = existing.id,
-                                            localCoverPath = existing.localCoverPath
-                                        )
-                                    )
+                                    dao.updateBook(cloud.copy(id = existing.id, localCoverPath = existing.localCoverPath))
                                 }
+                            }
+                            withContext(Dispatchers.Main) {
+                                loadLocalBooks()
+                                loadFavouriteBooks()
                             }
                         }
                     }
-                    .addOnFailureListener { e ->
-                        localErrorMessage = "Failed to sync favourites: ${e.message}"
+                    .addOnFailureListener {
+                        // keep silent to stay simple
                     }
-
-                // Sync library collection
-                FirebaseService.libraryRef().get()
-                    .addOnSuccessListener { snap ->
-                        viewModelScope.launch(Dispatchers.IO) {
-                            snap.documents.forEach { doc ->
-                                val cloud = snapshotToEntity(doc)
-                                val existing = cloud.key?.let { dao.getBookByKey(it) }
-                                if (existing == null) {
-                                    dao.insertBook(cloud)
-                                } else {
-                                    dao.updateBook(
-                                        cloud.copy(
-                                            id = existing.id,
-                                            localCoverPath = existing.localCoverPath
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        localErrorMessage = "Failed to sync library: ${e.message}"
-                    }
-
-                // Refresh local and favourite books after sync
-                withContext(Dispatchers.Main) {
-                    loadLocalBooks()
-                    loadFavouriteBooks()
-                }
-            } catch (e: Exception) {
-                localErrorMessage = "Sync error: ${e.message}"
-            }
+            } catch (_: Exception) { /* no-op */ }
         }
     }
 }
