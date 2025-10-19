@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState // Added import
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.launch
 
@@ -27,14 +28,17 @@ fun BookDetailScreen(
     val descLoading = if (isOnline) viewModel.onlineDescLoading else viewModel.localDescLoading
     val descError = if (isOnline) viewModel.onlineDescError else viewModel.localDescError
     var isInLibrary by remember { mutableStateOf(false) }
+    var isFavourite by remember { mutableStateOf(book?.isFavourite ?: false) }
     var showDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    // Check if book is in local library
+    // Check if book is in local library and favourite status
     LaunchedEffect(book) {
         if (book != null) {
             isInLibrary = viewModel.isBookInLibrary(book)
+            isFavourite = book.isFavourite
         }
     }
 
@@ -49,7 +53,7 @@ fun BookDetailScreen(
         return
     }
 
-    // Confirmation Dialog
+    // Confirmation Dialog for Deletion
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -157,7 +161,7 @@ fun BookDetailScreen(
                     showDialog = true
                 } else {
                     coroutineScope.launch {
-                        viewModel.addToLocalLibrary(book)
+                        viewModel.addToLocalLibrary(book, isFavourite)
                         isInLibrary = true
                     }
                 }
@@ -167,6 +171,31 @@ fun BookDetailScreen(
             Text(if (isInLibrary) "Remove from Local Library" else "Add to Local Library")
         }
 
-        Spacer(modifier = Modifier.height(32.dp)) // Extra bottom padding for readability
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Favourite/Unfavourite Button
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    if (isOnline && !isInLibrary) {
+                        viewModel.addToLocalLibrary(book, true)
+                        isInLibrary = true
+                        isFavourite = true
+                    } else {
+                        viewModel.toggleFavourite(book)
+                        isFavourite = !isFavourite
+                        // Navigate back if unfavourited from favourites screen
+                        if (!isFavourite && currentRoute == "local_detail" && navController.previousBackStackEntry?.destination?.route == "favourites") {
+                            navController.navigateUp()
+                        }
+                    }
+                }
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(if (isFavourite) "Remove from Favourites" else "Add to Favourites")
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }

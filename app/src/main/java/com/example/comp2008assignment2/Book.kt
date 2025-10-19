@@ -11,5 +11,6 @@ data class Book(
     val first_publish_year: Int?,
     val cover_i: Int?, // Cover ID for image
     val description: String? = null, // Description for detailed view
-    val localCoverPath: String? = null // Local path for offline image
+    val localCoverPath: String? = null, // Local path for offline image
+    val isFavourite: Boolean = false
 )
