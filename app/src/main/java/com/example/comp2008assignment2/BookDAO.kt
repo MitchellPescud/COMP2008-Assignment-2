@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Delete
+import androidx.room.Update
 
 @Dao
 interface BookDao {
@@ -28,4 +29,18 @@ interface BookDao {
 
     @Query("SELECT * FROM LocalBooks WHERE key = :key")
     suspend fun getBookByKey(key: String): BookEntity?
+
+    @Query("SELECT * FROM LocalBooks WHERE isFavourite = 1")
+    suspend fun getFavouriteBooks(): List<BookEntity>
+
+    @Query("SELECT * FROM LocalBooks WHERE isFavourite = 1 AND (title LIKE :query OR author_name LIKE :query)")
+    suspend fun searchFavouriteBooks(query: String): List<BookEntity>
+
+    @Query("SELECT * FROM LocalBooks WHERE isFavourite = 1 AND title LIKE :query")
+    suspend fun searchFavouriteBooksByTitle(query: String): List<BookEntity>
+
+    @Query("SELECT * FROM LocalBooks WHERE isFavourite = 1 AND author_name LIKE :query")
+    suspend fun searchFavouriteBooksByAuthor(query: String): List<BookEntity>
+    @Update
+    suspend fun updateBook(book: BookEntity)
 }

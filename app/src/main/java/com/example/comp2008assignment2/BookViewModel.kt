@@ -36,6 +36,13 @@ class BookViewModel : ViewModel() {
     var localErrorMessage by mutableStateOf<String?>(null)
         private set
 
+    var favouriteBooks by mutableStateOf<List<Book>>(emptyList())
+        private set
+    var favouriteIsLoading by mutableStateOf(false)
+        private set
+    var favouriteErrorMessage by mutableStateOf<String?>(null)
+        private set
+
     var selectedOnlineBook by mutableStateOf<Book?>(null)
         private set
     var onlineDescLoading by mutableStateOf(false)
@@ -91,10 +98,10 @@ class BookViewModel : ViewModel() {
                     if (books.isEmpty()) {
                         errorMessage = "No books found for this query."
                     }
-                    return // Success, exit retry loop
+                    return
                 } else {
                     if (response.code() == 500 && attempt < retries - 1) {
-                        delay(1000L * (attempt + 1)) // Exponential backoff
+                        delay(1000L * (attempt + 1))
                     } else {
                         errorMessage = when (response.code()) {
                             404 -> "No books found for this query."
@@ -135,7 +142,8 @@ class BookViewModel : ViewModel() {
                         first_publish_year = entity.first_publish_year,
                         cover_i = entity.cover_i,
                         description = entity.description,
-                        localCoverPath = entity.localCoverPath
+                        localCoverPath = entity.localCoverPath,
+                        isFavourite = entity.isFavourite
                     )
                 }
                 if (localBooks.isEmpty() && query.isNotBlank()) {
@@ -145,6 +153,46 @@ class BookViewModel : ViewModel() {
                 localErrorMessage = "Error loading local books: ${e.message}"
             } finally {
                 localIsLoading = false
+            }
+        }
+    }
+
+    fun loadFavouriteBooks(query: String = "", searchType: SearchType = SearchType.GENERAL) {
+        viewModelScope.launch {
+            favouriteIsLoading = true
+            favouriteErrorMessage = null
+            try {
+                val q = "%${query.trim()}%"
+                val entities = withContext(Dispatchers.IO) {
+                    if (query.isEmpty() && searchType == SearchType.GENERAL) {
+                        dao.getFavouriteBooks()
+                    } else {
+                        when (searchType) {
+                            SearchType.GENERAL -> dao.searchFavouriteBooks(q)
+                            SearchType.TITLE -> dao.searchFavouriteBooksByTitle(q)
+                            SearchType.AUTHOR -> dao.searchFavouriteBooksByAuthor(q)
+                        }
+                    }
+                }
+                favouriteBooks = entities.map { entity ->
+                    Book(
+                        key = entity.key,
+                        title = entity.title,
+                        author_name = entity.author_name?.split(", ") ?: emptyList(),
+                        first_publish_year = entity.first_publish_year,
+                        cover_i = entity.cover_i,
+                        description = entity.description,
+                        localCoverPath = entity.localCoverPath,
+                        isFavourite = entity.isFavourite
+                    )
+                }
+                if (favouriteBooks.isEmpty() && query.isNotBlank()) {
+                    favouriteErrorMessage = "No favourite books found for this query."
+                }
+            } catch (e: Exception) {
+                favouriteErrorMessage = "Error loading favourite books: ${e.message}"
+            } finally {
+                favouriteIsLoading = false
             }
         }
     }
@@ -163,7 +211,7 @@ class BookViewModel : ViewModel() {
         }
     }
 
-    fun addToLocalLibrary(book: Book) {
+    fun addToLocalLibrary(book: Book, isFavourite: Boolean = false) {
         viewModelScope.launch {
             var updatedBook = book
             if (book.description == null) {
@@ -176,31 +224,35 @@ class BookViewModel : ViewModel() {
                     val url = URL("https://covers.openlibrary.org/b/id/$coverId-M.jpg")
                     val connection = url.openConnection() as HttpURLConnection
                     connection.connect()
-                    val input = connection.inputStream
+                    val inputStream = connection.inputStream
                     val file = File(MainActivity.app.filesDir, "cover_${coverId}.jpg")
                     FileOutputStream(file).use { output ->
-                        input.copyTo(output)
+                        inputStream.copyTo(output)
                     }
                     localPath = file.absolutePath
                 } catch (e: Exception) {
-                    // Proceed without cover if download fails
+                    // Handle error silently or log it
                 }
             }
 
             val entity = BookEntity(
-                key = updatedBook.key ?: return@launch,
+                key = updatedBook.key,
                 title = updatedBook.title,
                 author_name = updatedBook.author_name?.joinToString(", "),
                 first_publish_year = updatedBook.first_publish_year,
                 cover_i = updatedBook.cover_i,
                 description = updatedBook.description,
-                localCoverPath = localPath
+                localCoverPath = localPath,
+                isFavourite = isFavourite
             )
 
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
-            loadLocalBooks() // Refresh local books after adding
+            loadLocalBooks()
+            if (isFavourite) {
+                loadFavouriteBooks()
+            }
         }
     }
 
@@ -220,11 +272,32 @@ class BookViewModel : ViewModel() {
                     }
                 }
             }
-            loadLocalBooks() // Refresh local books after removal
+            loadLocalBooks()
+            loadFavouriteBooks()
             onSuccess()
         }
     }
 
+    fun toggleFavourite(book: Book) {
+        viewModelScope.launch {
+            book.key?.let { key ->
+                withContext(Dispatchers.IO) {
+                    dao.getBookByKey(key)?.let { entity ->
+                        val updatedEntity = entity.copy(isFavourite = !entity.isFavourite)
+                        dao.updateBook(updatedEntity)
+                    }
+                }
+                loadLocalBooks()
+                loadFavouriteBooks()
+                if (selectedOnlineBook == book) {
+                    selectedOnlineBook = book.copy(isFavourite = !book.isFavourite)
+                }
+                if (selectedLocalBook == book) {
+                    selectedLocalBook = book.copy(isFavourite = !book.isFavourite)
+                }
+            }
+        }
+    }
 
     fun addManualBook(
         title: String,
@@ -232,6 +305,7 @@ class BookViewModel : ViewModel() {
         year: Int?,
         localCoverPath: String? = null,
         description: String = "No Description Available",
+        isFavourite: Boolean = false,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
@@ -244,12 +318,16 @@ class BookViewModel : ViewModel() {
                 first_publish_year = year,
                 cover_i = null,
                 description = desc,
-                localCoverPath = localCoverPath
+                localCoverPath = localCoverPath,
+                isFavourite = isFavourite
             )
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
             loadLocalBooks()
+            if (isFavourite) {
+                loadFavouriteBooks()
+            }
             onSuccess()
         }
     }

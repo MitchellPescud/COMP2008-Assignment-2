@@ -12,5 +12,6 @@ data class BookEntity(
     val first_publish_year: Int?,
     val cover_i: Int?,
     val description: String?,
-    val localCoverPath: String?
+    val localCoverPath: String?,
+    val isFavourite: Boolean = false
 )
