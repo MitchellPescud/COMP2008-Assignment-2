@@ -8,14 +8,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState // Added import
+import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.launch
+import android.content.res.Configuration
 
 @Composable
 fun BookDetailScreen(
@@ -33,6 +35,10 @@ fun BookDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isTablet = configuration.smallestScreenWidthDp >= 600
+    val isSplitScreen = isTablet && isLandscape
 
     // Check if book is in local library and favourite status
     LaunchedEffect(book) {
@@ -84,15 +90,19 @@ fun BookDetailScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Back Button
-        Button(
-            onClick = { navController.navigateUp() },
-            modifier = Modifier.align(Alignment.Start)
-        ) {
-            Text("Back")
+        // Back Button (only shown if not in split-screen mode)
+        if (!isSplitScreen) {
+            Button(
+                onClick = { navController.navigateUp() },
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Text("Back")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
+        else {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
 
         // Book cover
         val coverUrl = book.localCoverPath ?: book.cover_i?.let { "https://covers.openlibrary.org/b/id/$it-M.jpg" }

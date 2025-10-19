@@ -27,6 +27,7 @@ fun BookSearchScreen(
     var searchType by remember { mutableStateOf(SearchType.GENERAL) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isTablet = configuration.smallestScreenWidthDp >= 600
 
     Column(
         modifier = modifier
@@ -144,12 +145,7 @@ fun BookSearchScreen(
             }
 
             else -> {
-                val isTablet = configuration.smallestScreenWidthDp >= 600
-                val columns = when {
-                    isTablet -> 2
-                    !isTablet && isLandscape -> 2
-                    else -> 1
-                }
+                val columns = if (isTablet) 2 else if (isLandscape) 2 else 1
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columns),
@@ -160,8 +156,12 @@ fun BookSearchScreen(
                 ) {
                     items(viewModel.books) { book ->
                         BookItem(book = book, onClick = {
-                            viewModel.selectOnlineBook(book)
-                            navController.navigate("online_detail")
+                            if (isTablet && isLandscape) {
+                                viewModel.selectBook(book, isOnline = true)
+                            } else {
+                                viewModel.selectOnlineBook(book)
+                                navController.navigate("online_detail")
+                            }
                         })
                     }
                 }

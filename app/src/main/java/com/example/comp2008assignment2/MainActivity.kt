@@ -8,8 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -46,57 +47,77 @@ class MainActivity : ComponentActivity() {
                 val viewModel: BookViewModel = viewModel()
                 val configuration = LocalConfiguration.current
                 val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val isTablet = configuration.smallestScreenWidthDp >= 600
 
-                if (isLandscape) {
+                if (isTablet && isLandscape) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
                         Row {
                             NavigationRailBar(navController)
-                            NavHost(
-                                navController = navController,
-                                startDestination = "search",
+                            Row(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
                             ) {
-                                composable("search") {
-                                    BookSearchScreen(
+                                // Left side: List screen
+                                Box(
+                                    modifier = Modifier
+                                        .weight(2f)
+                                        .fillMaxHeight()
+                                ) {
+                                    NavHost(
                                         navController = navController,
-                                        viewModel = viewModel
-                                    )
+                                        startDestination = "search",
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        composable("search") {
+                                            BookSearchScreen(
+                                                navController = navController,
+                                                viewModel = viewModel
+                                            )
+                                        }
+                                        composable("local") {
+                                            LocalLibraryScreen(
+                                                navController = navController,
+                                                viewModel = viewModel
+                                            )
+                                        }
+                                        composable("favourites") {
+                                            FavouritesScreen(
+                                                navController = navController,
+                                                viewModel = viewModel
+                                            )
+                                        }
+                                        composable("manual_add") {
+                                            ManualAddBookScreen(
+                                                vm = viewModel,
+                                                onBack = { navController.navigateUp() }
+                                            )
+                                        }
+                                    }
                                 }
-                                composable("local") {
-                                    LocalLibraryScreen(
-                                        navController = navController,
-                                        viewModel = viewModel
-                                    )
-                                }
-                                composable("online_detail") {
-                                    BookDetailScreen(
-                                        viewModel = viewModel,
-                                        navController = navController,
-                                        isOnline = true
-                                    )
-                                }
-                                composable("local_detail") {
-                                    BookDetailScreen(
-                                        viewModel = viewModel,
-                                        navController = navController,
-                                        isOnline = false
-                                    )
-                                }
-                                composable("favourites") {
-                                    FavouritesScreen(
-                                        navController = navController,
-                                        viewModel = viewModel
-                                    )
-                                }
-                                composable("manual_add") {
-                                    ManualAddBookScreen(
-                                        vm = viewModel,
-                                        onBack = { navController.navigateUp() }
+                                // Right side: Detail screen
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .padding(start = 8.dp)
+                                ) {
+                                    viewModel.selectedBook?.let { book ->
+                                        BookDetailScreen(
+                                            viewModel = viewModel,
+                                            navController = navController,
+                                            isOnline = viewModel.isSelectedBookOnline,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } ?: Text(
+                                        text = "Select a book to view details",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .wrapContentSize(Alignment.Center),
+                                        style = MaterialTheme.typography.bodyLarge
                                     )
                                 }
                             }
@@ -235,7 +256,7 @@ fun NavigationRailBar(navController: NavHostController) {
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             items.forEach { item ->
                 NavigationRailItem(

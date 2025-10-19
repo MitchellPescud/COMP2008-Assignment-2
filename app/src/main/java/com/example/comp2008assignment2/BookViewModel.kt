@@ -57,6 +57,11 @@ class BookViewModel : ViewModel() {
     var localDescError by mutableStateOf<String?>(null)
         private set
 
+    var selectedBook by mutableStateOf<Book?>(null)
+        private set
+    var isSelectedBookOnline by mutableStateOf(false)
+        private set
+
     private val api: OpenLibraryApi = Retrofit.Builder()
         .baseUrl("https://openlibrary.org/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -215,6 +220,23 @@ class BookViewModel : ViewModel() {
         }
     }
 
+    fun selectBook(book: Book, isOnline: Boolean) {
+        selectedBook = book
+        isSelectedBookOnline = isOnline
+        if (isOnline) {
+            selectOnlineBook(book)
+        } else {
+            selectLocalBook(book)
+        }
+    }
+
+    fun clearSelectedBook() {
+        selectedBook = null
+        isSelectedBookOnline = false
+        selectedOnlineBook = null
+        selectedLocalBook = null
+    }
+
     fun addToLocalLibrary(book: Book, isFavourite: Boolean = false) {
         viewModelScope.launch {
             var updatedBook = book
@@ -269,7 +291,7 @@ class BookViewModel : ViewModel() {
                             try {
                                 File(path).delete()
                             } catch (e: Exception) {
-                                // Handle error silently or log it
+                                // Log or handle error if deletion fails
                             }
                         }
                         dao.deleteBook(entity)
@@ -278,6 +300,9 @@ class BookViewModel : ViewModel() {
             }
             loadLocalBooks()
             loadFavouriteBooks()
+            if (selectedBook == book) {
+                clearSelectedBook()
+            }
             onSuccess()
         }
     }
@@ -298,6 +323,9 @@ class BookViewModel : ViewModel() {
                 }
                 if (selectedLocalBook == book) {
                     selectedLocalBook = book.copy(isFavourite = !book.isFavourite)
+                }
+                if (selectedBook == book) {
+                    selectedBook = book.copy(isFavourite = !book.isFavourite)
                 }
             }
         }
@@ -370,7 +398,7 @@ class BookViewModel : ViewModel() {
     }
 
     private fun fetchDescription(book: Book, isOnline: Boolean) {
-        if (book.key == null || (!isOnline && book.key.startsWith("manual_"))) {
+        if (book.key == null || (isOnline == false && book.key.startsWith("manual_"))) {
             updateBookDescription(book, book.description ?: "No description available.", isOnline)
             return
         }
@@ -431,10 +459,16 @@ class BookViewModel : ViewModel() {
             if (selectedOnlineBook == book) {
                 selectedOnlineBook = selectedOnlineBook?.copy(description = description)
             }
+            if (selectedBook == book) {
+                selectedBook = selectedBook?.copy(description = description)
+            }
         } else {
             localBooks = localBooks.map { if (it == book) it.copy(description = description) else it }
             if (selectedLocalBook == book) {
                 selectedLocalBook = selectedLocalBook?.copy(description = description)
+            }
+            if (selectedBook == book) {
+                selectedBook = selectedBook?.copy(description = description)
             }
         }
     }

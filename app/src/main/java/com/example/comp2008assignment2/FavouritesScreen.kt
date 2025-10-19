@@ -27,6 +27,7 @@ fun FavouritesScreen(
     var searchType by remember { mutableStateOf(SearchType.GENERAL) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isTablet = configuration.smallestScreenWidthDp >= 600
 
     LaunchedEffect(Unit) {
         viewModel.loadFavouriteBooks("", SearchType.GENERAL)
@@ -148,12 +149,7 @@ fun FavouritesScreen(
             }
 
             else -> {
-                val isTablet = configuration.smallestScreenWidthDp >= 600
-                val columns = when {
-                    isTablet -> 2
-                    !isTablet && isLandscape -> 2
-                    else -> 1
-                }
+                val columns = if (isTablet) 2 else if (isLandscape) 2 else 1
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columns),
@@ -164,8 +160,12 @@ fun FavouritesScreen(
                 ) {
                     items(viewModel.favouriteBooks) { book ->
                         BookItem(book = book, onClick = {
-                            viewModel.selectLocalBook(book)
-                            navController.navigate("local_detail")
+                            if (isTablet && isLandscape) {
+                                viewModel.selectBook(book, isOnline = false)
+                            } else {
+                                viewModel.selectLocalBook(book)
+                                navController.navigate("local_detail")
+                            }
                         })
                     }
                 }
