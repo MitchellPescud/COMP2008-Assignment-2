@@ -269,7 +269,7 @@ class BookViewModel : ViewModel() {
                             try {
                                 File(path).delete()
                             } catch (e: Exception) {
-                                // Log or handle error if deletion fails
+                                // Handle error silently or log it
                             }
                         }
                         dao.deleteBook(entity)
@@ -370,7 +370,7 @@ class BookViewModel : ViewModel() {
     }
 
     private fun fetchDescription(book: Book, isOnline: Boolean) {
-        if (book.key == null || (isOnline == false && book.key.startsWith("manual_"))) {
+        if (book.key == null || (!isOnline && book.key.startsWith("manual_"))) {
             updateBookDescription(book, book.description ?: "No description available.", isOnline)
             return
         }

@@ -150,8 +150,7 @@ fun FavouritesScreen(
             else -> {
                 val isTablet = configuration.smallestScreenWidthDp >= 600
                 val columns = when {
-                    isTablet && isLandscape -> 3
-                    isTablet && !isLandscape -> 2
+                    isTablet -> 2
                     !isTablet && isLandscape -> 2
                     else -> 1
                 }
