@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState // Added import
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.launch
 
@@ -31,6 +32,7 @@ fun BookDetailScreen(
     var showDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     // Check if book is in local library and favourite status
     LaunchedEffect(book) {
@@ -182,6 +184,10 @@ fun BookDetailScreen(
                     } else {
                         viewModel.toggleFavourite(book)
                         isFavourite = !isFavourite
+                        // Navigate back if unfavourited from favourites screen
+                        if (!isFavourite && currentRoute == "local_detail" && navController.previousBackStackEntry?.destination?.route == "favourites") {
+                            navController.navigateUp()
+                        }
                     }
                 }
             },

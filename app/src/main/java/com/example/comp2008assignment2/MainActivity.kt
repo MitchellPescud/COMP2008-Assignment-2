@@ -169,14 +169,20 @@ fun BottomNavigationBar(navController: NavHostController) {
     // Map child routes to their parent routes for highlighting
     val routeToParent = mapOf(
         "online_detail" to "search",
-        "local_detail" to "local",
         "manual_add" to "local"
     )
 
     NavigationBar {
-        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-        // Determine the effective route for highlighting (parent or current)
-        val effectiveRoute = routeToParent[currentRoute] ?: currentRoute
+        val currentBackStackEntry = navController.currentBackStackEntryAsState().value
+        val currentRoute = currentBackStackEntry?.destination?.route
+        // Determine the effective route for highlighting
+        val effectiveRoute = if (currentRoute == "local_detail") {
+            // Check the previous route in the back stack
+            val previousRoute = navController.previousBackStackEntry?.destination?.route
+            if (previousRoute == "favourites") "favourites" else "local"
+        } else {
+            routeToParent[currentRoute] ?: currentRoute
+        }
 
         items.forEach { item ->
             NavigationBarItem(
@@ -200,19 +206,25 @@ fun NavigationRailBar(navController: NavHostController) {
     val items = listOf(
         NavigationItem("Search", "search", R.drawable.search),
         NavigationItem("Local Library", "local", R.drawable.library),
-        NavigationItem("Favorites", "favorites", R.drawable.favourite)
+        NavigationItem("Favourites", "favourites", R.drawable.favourite)
     )
 
     // Map child routes to their parent routes for highlighting
     val routeToParent = mapOf(
         "online_detail" to "search",
-        "local_detail" to "local",
         "manual_add" to "local"
     )
 
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    // Determine the effective route for highlighting (parent or current)
-    val effectiveRoute = routeToParent[currentRoute] ?: currentRoute
+    val currentBackStackEntry = navController.currentBackStackEntryAsState().value
+    val currentRoute = currentBackStackEntry?.destination?.route
+    // Determine the effective route for highlighting
+    val effectiveRoute = if (currentRoute == "local_detail") {
+        // Check the previous route in the back stack
+        val previousRoute = navController.previousBackStackEntry?.destination?.route
+        if (previousRoute == "favourites") "favourites" else "local"
+    } else {
+        routeToParent[currentRoute] ?: currentRoute
+    }
 
     NavigationRail(
         modifier = Modifier
