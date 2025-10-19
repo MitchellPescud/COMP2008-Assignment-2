@@ -87,8 +87,8 @@ class MainActivity : ComponentActivity() {
                                         isOnline = false
                                     )
                                 }
-                                composable("favorites") {
-                                    FavoritesScreen(
+                                composable("favourites") {
+                                    FavouritesScreen(
                                         navController = navController,
                                         viewModel = viewModel
                                     )
@@ -138,8 +138,8 @@ class MainActivity : ComponentActivity() {
                                     isOnline = false
                                 )
                             }
-                            composable("favorites") {
-                                FavoritesScreen(
+                            composable("favourites") {
+                                FavouritesScreen(
                                     navController = navController,
                                     viewModel = viewModel
                                 )
@@ -163,7 +163,7 @@ fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         NavigationItem("Search", "search", R.drawable.search),
         NavigationItem("Local Library", "local", R.drawable.library),
-        NavigationItem("Favorites", "favorites", R.drawable.favourite)
+        NavigationItem("Favourites", "favourites", R.drawable.favourite)
     )
 
     // Map child routes to their parent routes for highlighting

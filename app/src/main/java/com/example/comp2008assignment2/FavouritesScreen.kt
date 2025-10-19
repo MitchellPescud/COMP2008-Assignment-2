@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 
 @Composable
-fun FavoritesScreen(
+fun FavouritesScreen(
     navController: NavHostController,
     viewModel: BookViewModel,
     modifier: Modifier = Modifier
