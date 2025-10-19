@@ -13,11 +13,11 @@ object FirebaseService {
 
     fun favouritesRef() =
         db.collection("users")
-            .document(auth.currentUser?.uid ?: "anonymous")
+            .document("nBLq0gqYwcRg5dLCKASExvPpCXf2")
             .collection("favourites")
 
     fun libraryRef() =
         db.collection("users")
-            .document(auth.currentUser?.uid ?: "anonymous")
+            .document("nBLq0gqYwcRg5dLCKASExvPpCXf2")
             .collection("library")
 }
