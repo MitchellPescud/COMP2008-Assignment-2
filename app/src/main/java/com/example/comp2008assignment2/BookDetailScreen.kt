@@ -13,6 +13,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.rememberAsyncImagePainter
@@ -86,6 +87,13 @@ fun BookDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(
+                color = if (isSplitScreen) {
+                    MaterialTheme.colorScheme.surfaceVariant // Light gray background
+                } else {
+                    MaterialTheme.colorScheme.background // Default background
+                }
+            )
             .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
