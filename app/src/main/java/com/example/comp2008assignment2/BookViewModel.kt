@@ -514,11 +514,7 @@ class BookViewModel : ViewModel() {
                                 val cloud = snapshotToEntity(doc)
                                 val existing = cloud.key?.let { dao.getBookByKey(it) }
                                 // keep any local cover path if we already had this book
-                                if (existing == null) {
-                                    dao.insertBook(cloud)
-                                } else {
-                                    dao.updateBook(cloud.copy(id = existing.id, localCoverPath = existing.localCoverPath))
-                                }
+                                dao.insertBook(cloud.copy(localCoverPath = existing?.localCoverPath))
                             }
                             withContext(Dispatchers.Main) {
                                 loadLocalBooks()
