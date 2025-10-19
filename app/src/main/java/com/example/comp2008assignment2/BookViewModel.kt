@@ -525,6 +525,30 @@ class BookViewModel : ViewModel() {
                     if (FirebaseService.auth.currentUser != null) return@repeat
                     kotlinx.coroutines.delay(100)
                 }
+                // Sync library collection
+                FirebaseService.libraryRef().get()
+                    .addOnSuccessListener { snap ->
+                        viewModelScope.launch(Dispatchers.IO) {
+                            snap.documents.forEach { doc ->
+                                val cloud = snapshotToEntity(doc)
+                                val existing = cloud.key?.let { dao.getBookByKey(it) }
+                                // keep any local cover path if we already had this book
+                                if (existing == null) {
+                                    dao.insertBook(cloud)
+                                } else {
+                                    dao.updateBook(cloud.copy(id = existing.id, localCoverPath = existing.localCoverPath))
+                                }
+                            }
+                            withContext(Dispatchers.Main) {
+                                loadLocalBooks()
+                                loadFavouriteBooks()
+                            }
+                        }
+                    }
+                    .addOnFailureListener {
+                        // keep silent to stay simple
+                    }
+                // Sync favourites collection
                 FirebaseService.favouritesRef().get()
                     .addOnSuccessListener { snap ->
                         viewModelScope.launch(Dispatchers.IO) {
