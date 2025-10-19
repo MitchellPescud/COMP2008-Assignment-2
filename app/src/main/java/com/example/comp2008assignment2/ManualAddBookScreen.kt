@@ -1,8 +1,10 @@
 package com.example.comp2008assignment2
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.core.content.ContextCompat
 import coil.compose.rememberAsyncImagePainter
 import java.io.File
 import java.io.FileOutputStream
@@ -41,24 +44,14 @@ fun ManualAddBookScreen(
     val year = yearText.toIntOrNull()
     val scrollState = rememberScrollState()
 
-    // Permission launcher for camera and storage
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val cameraGranted = permissions[android.Manifest.permission.CAMERA] ?: false
-        val storageGranted = permissions[android.Manifest.permission.READ_EXTERNAL_STORAGE] ?: false
-        if (cameraGranted || storageGranted) {
-        }
-    }
-
-    // Launcher for picking image from gallery
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            coverUri = it
-            localCoverPath = saveImageToInternalStorage(context, it)
-        }
+    // Initialize CAMERA permission state
+    var isCameraPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        )
     }
 
     // Launcher for taking a photo
@@ -69,6 +62,29 @@ fun ManualAddBookScreen(
             val uri = saveBitmapToInternalStorage(context, it)
             coverUri = uri
             localCoverPath = uri?.path
+        }
+    }
+
+    // Permission launcher for camera and storage
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        isCameraPermissionGranted = permissions[android.Manifest.permission.CAMERA] ?: false
+        if (isCameraPermissionGranted) {
+            // Launch camera immediately after permission is granted
+            takePictureLauncher.launch(null)
+        } else if (permissions[android.Manifest.permission.CAMERA] == false) {
+            Toast.makeText(context, "Camera permission is required to take a photo.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Launcher for picking image from gallery
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            coverUri = it
+            localCoverPath = saveImageToInternalStorage(context, it)
         }
     }
 
@@ -186,10 +202,13 @@ fun ManualAddBookScreen(
                 }
                 Button(
                     onClick = {
-                        permissionLauncher.launch(
-                            arrayOf(android.Manifest.permission.CAMERA)
-                        )
-                        takePictureLauncher.launch(null)
+                        if (isCameraPermissionGranted) {
+                            takePictureLauncher.launch(null)
+                        } else {
+                            permissionLauncher.launch(
+                                arrayOf(android.Manifest.permission.CAMERA)
+                            )
+                        }
                     }
                 ) {
                     Text("Take Photo")
