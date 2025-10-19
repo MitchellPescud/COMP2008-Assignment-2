@@ -253,6 +253,11 @@ class BookViewModel : ViewModel() {
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
+
+            if (isFavourite) {
+                addFirestoreFavourite(entity.copy(localCoverPath = null))
+            }
+
             loadLocalBooks()
             if (isFavourite) {
                 loadFavouriteBooks()
@@ -272,6 +277,11 @@ class BookViewModel : ViewModel() {
                                 // Log or handle error if deletion fails
                             }
                         }
+
+                        if (entity.isFavourite) {
+                            deleteFirestoreFavourite(entity)
+                        }
+
                         dao.deleteBook(entity)
                     }
                 }
@@ -289,6 +299,14 @@ class BookViewModel : ViewModel() {
                     dao.getBookByKey(key)?.let { entity ->
                         val updatedEntity = entity.copy(isFavourite = !entity.isFavourite)
                         dao.updateBook(updatedEntity)
+
+                        if (!entity.isFavourite) {
+                            // just became favourite
+                            addFirestoreFavourite(updatedEntity.copy(localCoverPath = null))
+                        } else {
+                            // just unfavourited
+                            deleteFirestoreFavourite(updatedEntity)
+                        }
                     }
                 }
                 loadLocalBooks()
@@ -328,6 +346,11 @@ class BookViewModel : ViewModel() {
             withContext(Dispatchers.IO) {
                 dao.insertBook(entity)
             }
+
+            if (isFavourite) {
+                addFirestoreFavourite(entity.copy(localCoverPath = null))
+            }
+
             loadLocalBooks()
             if (isFavourite) {
                 loadFavouriteBooks()
@@ -436,6 +459,73 @@ class BookViewModel : ViewModel() {
             if (selectedLocalBook == book) {
                 selectedLocalBook = selectedLocalBook?.copy(description = description)
             }
+        }
+    }
+
+    private fun entityToMap(e: BookEntity) = mapOf(
+        "key" to e.key,
+        "title" to e.title,
+        "author_name" to e.author_name,
+        "first_publish_year" to e.first_publish_year,
+        "cover_i" to e.cover_i,
+        "description" to e.description,
+        "isFavourite" to e.isFavourite
+    )
+
+    private fun snapshotToEntity(doc: com.google.firebase.firestore.DocumentSnapshot) = BookEntity(
+        id = 0,
+        key = doc.getString("key"),
+        title = doc.getString("title"),
+        author_name = doc.getString("author_name"),
+        first_publish_year = doc.getLong("first_publish_year")?.toInt(),
+        cover_i = doc.getLong("cover_i")?.toInt(),
+        description = doc.getString("description"),
+        localCoverPath = null,
+        isFavourite = doc.getBoolean("isFavourite") == true
+    )
+
+    private fun firestoreDocId(e: BookEntity): String =
+        (e.key?.trim('/')?.replace("/", "_")) ?: "local_${e.hashCode()}"
+
+    private fun addFirestoreFavourite(e: BookEntity) {
+        FirebaseService.favouritesRef()
+            .document(firestoreDocId(e))
+            .set(entityToMap(e))
+    }
+
+    private fun deleteFirestoreFavourite(e: BookEntity) {
+        FirebaseService.favouritesRef()
+            .document(firestoreDocId(e))
+            .delete()
+    }
+
+    fun sync() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Wait very briefly until anonymous sign-in is ready
+                repeat(20) {
+                    if (FirebaseService.auth.currentUser != null) return@repeat
+                    kotlinx.coroutines.delay(100)
+                }
+                FirebaseService.favouritesRef().get()
+                    .addOnSuccessListener { snap ->
+                        viewModelScope.launch(Dispatchers.IO) {
+                            snap.documents.forEach { doc ->
+                                val cloud = snapshotToEntity(doc)
+                                val existing = cloud.key?.let { dao.getBookByKey(it) }
+                                // keep any local cover path if we already had this book
+                                dao.insertBook(cloud.copy(localCoverPath = existing?.localCoverPath))
+                            }
+                            withContext(Dispatchers.Main) {
+                                loadLocalBooks()
+                                loadFavouriteBooks()
+                            }
+                        }
+                    }
+                    .addOnFailureListener {
+                        // keep silent to stay simple
+                    }
+            } catch (_: Exception) { /* no-op */ }
         }
     }
 }

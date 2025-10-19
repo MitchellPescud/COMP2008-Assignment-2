@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,6 +23,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.comp2008assignment2.ui.theme.COMP2008Assignment2Theme
+import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -40,12 +42,20 @@ class MainActivity : ComponentActivity() {
         bookDao = db.bookDao()
 
         enableEdgeToEdge()
+
+        FirebaseApp.initializeApp(this)
+        FirebaseService.auth.signInAnonymously()
+
         setContent {
             COMP2008Assignment2Theme {
                 val navController = rememberNavController()
                 val viewModel: BookViewModel = viewModel()
                 val configuration = LocalConfiguration.current
                 val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+                LaunchedEffect(Unit) {
+                    viewModel.sync()
+                }
 
                 if (isLandscape) {
                     Surface(
