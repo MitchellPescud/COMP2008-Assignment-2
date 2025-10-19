@@ -206,15 +206,19 @@ class BookViewModel : ViewModel() {
 
     fun selectLocalBook(book: Book) {
         selectedLocalBook = book
-        if (book.description == null) {
+        localDescError = null // Reset error state
+        if (book.description == null && book.key?.startsWith("manual_") != true) {
             fetchDescription(book, isOnline = false)
+        } else {
+            // For manual books or books with existing descriptions, update without fetching
+            updateBookDescription(book, book.description ?: "No description available.", isOnline = false)
         }
     }
 
     fun addToLocalLibrary(book: Book, isFavourite: Boolean = false) {
         viewModelScope.launch {
             var updatedBook = book
-            if (book.description == null) {
+            if (book.description == null && book.key?.startsWith("manual_") != true) {
                 updatedBook = fetchBookDescription(book)
             }
 
@@ -341,8 +345,8 @@ class BookViewModel : ViewModel() {
     }
 
     private suspend fun fetchBookDescription(book: Book): Book {
-        if (book.key == null) {
-            return book.copy(description = "No description available.")
+        if (book.key == null || book.key.startsWith("manual_")) {
+            return book.copy(description = book.description ?: "No description available.")
         }
 
         return try {
@@ -366,8 +370,8 @@ class BookViewModel : ViewModel() {
     }
 
     private fun fetchDescription(book: Book, isOnline: Boolean) {
-        if (book.key == null) {
-            updateBookDescription(book, "No description available.", isOnline)
+        if (book.key == null || (isOnline == false && book.key.startsWith("manual_"))) {
+            updateBookDescription(book, book.description ?: "No description available.", isOnline)
             return
         }
 
